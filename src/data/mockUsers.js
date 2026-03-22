@@ -1,11 +1,11 @@
 export const MOCK_USERS = [
-  // SUPER_ADMIN - Propriétaire système
+  // ADMIN_CLINIQUE - Propriétaire système
   {
     id: 1,
     email: 'admin@gestclinique.com',
     password: 'admin123',
     name: 'Alexandre Martin',
-    role: 'SUPER_ADMIN',
+    role: 'ADMIN_CLINIQUE',
     avatar: null,
     clinique: {
       id: 0,

@@ -18,7 +18,7 @@ const transactions = [
   {
     id: 1,
     type: 'payment',
-    amount: 50,
+    amount: 32800,
     method: 'card',
     patient: 'Marie Dubois',
     description: 'Consultation générale',
@@ -28,7 +28,7 @@ const transactions = [
   {
     id: 2,
     type: 'payment',
-    amount: 75,
+    amount: 49200,
     method: 'cash',
     patient: 'Jean Martin',
     description: 'Consultation cardiologie',
@@ -38,7 +38,7 @@ const transactions = [
   {
     id: 3,
     type: 'refund',
-    amount: -25,
+    amount: -16400,
     method: 'card',
     patient: 'Sophie Bernard',
     description: 'Remboursement consultation annulée',
@@ -48,7 +48,7 @@ const transactions = [
   {
     id: 4,
     type: 'payment',
-    amount: 120,
+    amount: 78600,
     method: 'card',
     patient: 'Pierre Lefebvre',
     description: 'Consultation + analyses',
@@ -58,7 +58,7 @@ const transactions = [
   {
     id: 5,
     type: 'payment',
-    amount: 60,
+    amount: 39300,
     method: 'cash',
     patient: 'Anne Moreau',
     description: 'Consultation de suivi',
@@ -147,7 +147,7 @@ export default function CaisseManager() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Aujourd'hui</p>
-              <p className="text-2xl font-bold text-gray-900">{totalToday}€</p>
+              <p className="text-2xl font-bold text-gray-900">{totalToday.toLocaleString('fr-FR')} FCFA</p>
               <div className="flex items-center mt-1">
                 <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
                 <span className="text-sm text-green-600">+12.5%</span>
@@ -163,7 +163,7 @@ export default function CaisseManager() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Espèces</p>
-              <p className="text-2xl font-bold text-gray-900">{cashToday}€</p>
+              <p className="text-2xl font-bold text-gray-900">{cashToday.toLocaleString('fr-FR')} FCFA</p>
               <p className="text-sm text-gray-500">
                 {todayTransactions.filter(t => t.method === 'cash').length} transactions
               </p>
@@ -178,7 +178,7 @@ export default function CaisseManager() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Cartes</p>
-              <p className="text-2xl font-bold text-gray-900">{cardToday}€</p>
+              <p className="text-2xl font-bold text-gray-900">{cardToday.toLocaleString('fr-FR')} FCFA</p>
               <p className="text-sm text-gray-500">
                 {todayTransactions.filter(t => t.method === 'card').length} transactions
               </p>
@@ -269,7 +269,7 @@ export default function CaisseManager() {
                     <td className="py-4 px-4 text-gray-600">{transaction.description}</td>
                     <td className="py-4 px-4">
                       <span className={`font-semibold ${getTypeColor(transaction.type, transaction.amount)}`}>
-                        {transaction.amount > 0 ? '+' : ''}{transaction.amount}€
+                        {transaction.amount > 0 ? '+' : ''}{transaction.amount.toLocaleString('fr-FR')} FCFA
                       </span>
                     </td>
                     <td className="py-4 px-4">

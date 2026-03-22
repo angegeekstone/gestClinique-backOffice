@@ -1,21 +1,64 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const data = [
-  { name: 'Lun', consultations: 24, rendezVous: 32 },
-  { name: 'Mar', consultations: 28, rendezVous: 35 },
-  { name: 'Mer', consultations: 22, rendezVous: 28 },
-  { name: 'Jeu', consultations: 31, rendezVous: 38 },
-  { name: 'Ven', consultations: 29, rendezVous: 34 },
-  { name: 'Sam', consultations: 18, rendezVous: 22 },
-  { name: 'Dim', consultations: 8, rendezVous: 12 },
-];
+import { useState, useEffect } from 'react';
+import { Loader, AlertCircle } from 'lucide-react';
+import { dashboardService } from '../../services/dashboardService.js';
 
 export default function AppointmentsChart() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchChartData();
+  }, []);
+
+  const fetchChartData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const chartData = await dashboardService.getAppointmentsChartData('week');
+      setData(chartData || []);
+    } catch (err) {
+      console.error('Erreur lors du chargement des données du graphique:', err);
+      setError('Erreur de chargement');
+      // Fallback avec données par défaut en cas d'erreur
+      setData([
+        { name: 'Lun', consultations: 0, rendezVous: 0 },
+        { name: 'Mar', consultations: 0, rendezVous: 0 },
+        { name: 'Mer', consultations: 0, rendezVous: 0 },
+        { name: 'Jeu', consultations: 0, rendezVous: 0 },
+        { name: 'Ven', consultations: 0, rendezVous: 0 },
+        { name: 'Sam', consultations: 0, rendezVous: 0 },
+        { name: 'Dim', consultations: 0, rendezVous: 0 },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-center h-80">
+          <div className="flex items-center space-x-2">
+            <Loader className="w-6 h-6 animate-spin text-blue-600" />
+            <span className="text-gray-600">Chargement du graphique...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-gray-900">Activité hebdomadaire</h3>
         <div className="flex items-center space-x-4">
+          {error && (
+            <div className="flex items-center text-orange-600 text-sm">
+              <AlertCircle className="w-4 h-4 mr-1" />
+              <span>Données par défaut</span>
+            </div>
+          )}
           <div className="flex items-center">
             <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
             <span className="text-sm text-gray-600">Consultations</span>
@@ -24,6 +67,12 @@ export default function AppointmentsChart() {
             <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
             <span className="text-sm text-gray-600">Rendez-vous</span>
           </div>
+          <button
+            onClick={fetchChartData}
+            className="text-xs text-blue-600 hover:text-blue-800"
+          >
+            Actualiser
+          </button>
         </div>
       </div>
 

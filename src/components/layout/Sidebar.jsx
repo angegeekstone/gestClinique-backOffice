@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Home,
   Users,
@@ -29,14 +30,14 @@ const getMenuItemsForRole = (role, permissions) => {
       title: 'Dashboard',
       icon: Home,
       href: '/dashboard',
-      roles: ['SUPER_ADMIN', 'ADMIN_CLINIQUE', 'MEDECIN', 'RECEPTION'],
+      roles: ['ADMIN_CLINIQUE', 'MEDECIN', 'RECEPTION', 'CAISSE'],
       badge: 'Vue d\'ensemble',
       badgeColor: 'bg-blue-100 text-blue-800'
     }
   ];
 
   const roleSpecificItems = {
-    SUPER_ADMIN: [
+    ADMIN_CLINIQUE: [
       {
         title: 'Gestion Cliniques',
         icon: Building,
@@ -83,16 +84,32 @@ const getMenuItemsForRole = (role, permissions) => {
     ],
     ADMIN_CLINIQUE: [
       {
-        title: 'Gestion Utilisateurs',
+        title: 'Utilisateurs',
         icon: UserCheck,
         href: '/admin-clinique/utilisateurs',
-        badge: 'SA CLINIQUE',
-        badgeColor: 'bg-purple-100 text-purple-800',
-        children: [
-          { title: 'Tous les utilisateurs', href: '/admin-clinique/utilisateurs', badge: 'Actif' },
-          { title: 'Ajouter utilisateur', href: '/admin-clinique/utilisateurs/nouveau', badge: 'Créer' },
-          { title: 'Rôles et permissions', href: '/admin-clinique/utilisateurs/roles', badge: 'Gérer' },
-        ]
+        badge: 'ÉQUIPE',
+        badgeColor: 'bg-purple-100 text-purple-800'
+      },
+      {
+        title: 'Rôles & Permissions',
+        icon: Shield,
+        href: '/admin-clinique/utilisateurs/roles',
+        badge: 'DROITS',
+        badgeColor: 'bg-gray-100 text-gray-800'
+      },
+      {
+        title: 'Spécialités',
+        icon: Stethoscope,
+        href: '/admin-clinique/specialites',
+        badge: 'MEDICAL',
+        badgeColor: 'bg-emerald-100 text-emerald-800'
+      },
+      {
+        title: 'Assurances',
+        icon: Shield,
+        href: '/admin-clinique/assurances',
+        badge: 'MUTUELLE',
+        badgeColor: 'bg-purple-100 text-purple-800'
       },
       {
         title: 'Rapports Clinique',
@@ -151,13 +168,19 @@ const getMenuItemsForRole = (role, permissions) => {
         badge: 'RX',
         badgeColor: 'bg-green-100 text-green-800',
         children: [
-          { title: 'Créer ordonnance', href: '/medecin/ordonnances/nouvelle', badge: 'Actif' },
-          { title: 'Mes ordonnances', href: '/medecin/ordonnances', badge: 'Actif' },
-          { title: 'Modèles', href: '/medecin/ordonnances/modeles', badge: 'Gérer' },
+          { title: 'Mes ordonnances', href: '/medecin/ordonnances', badge: 'Historique' },
+          { title: 'Créer depuis consultation', href: '/medecin/consultations/nouvelle', badge: 'Nouveau' }
         ]
       }
     ],
     RECEPTION: [
+      {
+        title: 'RDV du Jour',
+        icon: Calendar,
+        href: '/reception/rdv-du-jour',
+        badge: 'AUJOURD\'HUI',
+        badgeColor: 'bg-green-100 text-green-800'
+      },
       {
         title: 'Patients',
         icon: Users,
@@ -170,16 +193,30 @@ const getMenuItemsForRole = (role, permissions) => {
           { title: 'Recherche', href: '/reception/patients/recherche', badge: 'Chercher' },
         ]
       },
+    ],
+    CAISSE: [
       {
         title: 'Caisse',
         icon: DollarSign,
-        href: '/reception/caisse',
+        href: '/caissier/caisse',
         badge: 'PAIEMENTS',
         badgeColor: 'bg-green-100 text-green-800',
         children: [
-          { title: 'Encaissements', href: '/reception/caisse/encaissements', badge: 'Actif' },
-          { title: 'Historique', href: '/reception/caisse/historique', badge: 'Actif' },
-          { title: 'Rapport journalier', href: '/reception/caisse/rapport', badge: 'Vue' },
+          { title: 'Encaissements', href: '/caissier/caisse/encaissements', badge: 'Actif' },
+          { title: 'Historique', href: '/caissier/caisse/historique', badge: 'Vue' },
+          { title: 'Rapport journalier', href: '/caissier/caisse/rapport', badge: 'Gérer' },
+        ]
+      },
+      {
+        title: 'Facturation',
+        icon: CreditCard,
+        href: '/caissier/facturation',
+        badge: 'FACTURES',
+        badgeColor: 'bg-blue-100 text-blue-800',
+        children: [
+          { title: 'Factures en attente', href: '/caissier/facturation/attente', badge: 'Vue' },
+          { title: 'Factures payées', href: '/caissier/facturation/payees', badge: 'Vue' },
+          { title: 'Relances', href: '/caissier/facturation/relances', badge: 'Gérer' },
         ]
       }
     ]
@@ -203,7 +240,7 @@ const getMenuItemsForRole = (role, permissions) => {
       title: 'Planning',
       icon: Calendar,
       href: '/planning',
-      roles: ['ADMIN_CLINIQUE', 'MEDECIN', 'RECEPTION'],
+      roles: ['ADMIN_CLINIQUE', 'MEDECIN'],
       badge: 'RDV',
       badgeColor: 'bg-orange-100 text-orange-800'
     },
@@ -226,11 +263,14 @@ const getMenuItemsForRole = (role, permissions) => {
 
 const SidebarItem = ({ item, isOpen, activeItem, setActiveItem }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
   const hasChildren = item.children && item.children.length > 0;
 
   const handleClick = () => {
     if (hasChildren) {
       setIsExpanded(!isExpanded);
+    } else {
+      navigate(item.href);
     }
     setActiveItem(item.href);
   };
@@ -267,7 +307,10 @@ const SidebarItem = ({ item, isOpen, activeItem, setActiveItem }) => {
           {item.children.map((child) => (
             <button
               key={child.href}
-              onClick={() => setActiveItem(child.href)}
+              onClick={() => {
+                navigate(child.href);
+                setActiveItem(child.href);
+              }}
               className={cn(
                 "w-full text-left px-4 py-2 text-sm transition-colors duration-200",
                 "hover:bg-gray-50 hover:text-blue-600",

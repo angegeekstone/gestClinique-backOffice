@@ -1,6 +1,6 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { findUserByCredentials, MOCK_USERS } from '../data/mockUsers';
 import {
   Stethoscope,
   Mail,
@@ -8,7 +8,6 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  User,
   Shield,
   Users,
   Building
@@ -16,7 +15,7 @@ import {
 
 const DEMO_ACCOUNTS = [
   {
-    role: 'SUPER_ADMIN',
+    role: 'ADMIN_CLINIQUE',
     email: 'admin@gestclinique.com',
     password: 'admin123',
     name: 'Alexandre Martin',
@@ -63,6 +62,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
@@ -71,15 +71,14 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const user = findUserByCredentials(email, password);
-
-      if (user) {
-        login(user);
-      } else {
-        setError('Email ou mot de passe incorrect');
-      }
+      await login(email, password);
+      navigate('/dashboard');
     } catch (error) {
-      setError('Une erreur est survenue lors de la connexion');
+      console.error('Login error:', error);
+      const errorMessage = error.response?.data?.message 
+        || error.response?.data 
+        || 'Échec de la connexion. Vérifiez vos identifiants.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -91,10 +90,13 @@ export default function Login() {
     setError('');
   };
 
-  const quickLogin = (account) => {
-    const user = findUserByCredentials(account.email, account.password);
-    if (user) {
-      login(user);
+  const quickLogin = async (account) => {
+    try {
+      await login(account.email, account.password);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Quick login error:', error);
+      setError(error.response?.data?.message || 'Échec de la connexion');
     }
   };
 
@@ -128,6 +130,7 @@ export default function Login() {
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="votre@email.com"
                   required
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -200,7 +203,7 @@ export default function Login() {
               const Icon = account.icon;
               return (
                 <div
-                  key={account.role}
+                  key={account.email}
                   className={`border-2 rounded-xl p-4 transition-all hover:shadow-md ${account.bgColor}`}
                 >
                   <div className="flex items-start space-x-4">
@@ -226,7 +229,7 @@ export default function Login() {
                     <button
                       onClick={() => quickLogin(account)}
                       className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white ${
-                        account.role === 'SUPER_ADMIN' ? 'bg-red-600 hover:bg-red-700' :
+                        account.role === 'ADMIN_CLINIQUE' ? 'bg-red-600 hover:bg-red-700' :
                         account.role === 'ADMIN_CLINIQUE' ? 'bg-purple-600 hover:bg-purple-700' :
                         account.role === 'MEDECIN' ? 'bg-blue-600 hover:bg-blue-700' :
                         'bg-green-600 hover:bg-green-700'

@@ -92,14 +92,6 @@ const getStatusColor = (status) => {
 export default function PrescriptionsManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [showNewPrescription, setShowNewPrescription] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState('');
-
-  const [newPrescription, setNewPrescription] = useState({
-    patient: '',
-    diagnosis: '',
-    medications: [{ name: '', dosage: '', duration: '', quantity: '' }]
-  });
 
   const filteredPrescriptions = prescriptions.filter(prescription => {
     const matchesSearch = prescription.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -108,27 +100,6 @@ export default function PrescriptionsManager() {
     return matchesSearch && matchesStatus;
   });
 
-  const addMedication = () => {
-    setNewPrescription({
-      ...newPrescription,
-      medications: [...newPrescription.medications, { name: '', dosage: '', duration: '', quantity: '' }]
-    });
-  };
-
-  const removeMedication = (index) => {
-    const medications = newPrescription.medications.filter((_, i) => i !== index);
-    setNewPrescription({ ...newPrescription, medications });
-  };
-
-  const handleSavePrescription = () => {
-    console.log('Sauvegarde de l\'ordonnance:', newPrescription);
-    setShowNewPrescription(false);
-    setNewPrescription({
-      patient: '',
-      diagnosis: '',
-      medications: [{ name: '', dosage: '', duration: '', quantity: '' }]
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -138,159 +109,14 @@ export default function PrescriptionsManager() {
           <p className="text-gray-600">Gérez vos prescriptions et ordonnances</p>
         </div>
         <button
-          onClick={() => setShowNewPrescription(true)}
+          onClick={() => window.location.href = '/medecin/consultations/nouvelle'}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
         >
           <Plus className="w-5 h-5" />
-          <span>Nouvelle Ordonnance</span>
+          <span>Créer depuis Consultation</span>
         </button>
       </div>
 
-      {/* Formulaire nouvelle ordonnance */}
-      {showNewPrescription && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Nouvelle Ordonnance</h3>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowNewPrescription(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSavePrescription}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-              >
-                <Save className="w-4 h-4" />
-                <span>Sauvegarder</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Patient
-                </label>
-                <input
-                  type="text"
-                  value={newPrescription.patient}
-                  onChange={(e) => setNewPrescription({ ...newPrescription, patient: e.target.value })}
-                  placeholder="Rechercher un patient..."
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Diagnostic
-                </label>
-                <input
-                  type="text"
-                  value={newPrescription.diagnosis}
-                  onChange={(e) => setNewPrescription({ ...newPrescription, diagnosis: e.target.value })}
-                  placeholder="Diagnostic médical..."
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-md font-semibold text-gray-900">Médicaments</h4>
-                <button
-                  onClick={addMedication}
-                  className="text-blue-600 hover:text-blue-700 flex items-center space-x-1"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Ajouter un médicament</span>
-                </button>
-              </div>
-
-              {newPrescription.medications.map((medication, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Médicament
-                    </label>
-                    <input
-                      type="text"
-                      value={medication.name}
-                      onChange={(e) => {
-                        const medications = [...newPrescription.medications];
-                        medications[index].name = e.target.value;
-                        setNewPrescription({ ...newPrescription, medications });
-                      }}
-                      placeholder="Nom du médicament"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Posologie
-                    </label>
-                    <input
-                      type="text"
-                      value={medication.dosage}
-                      onChange={(e) => {
-                        const medications = [...newPrescription.medications];
-                        medications[index].dosage = e.target.value;
-                        setNewPrescription({ ...newPrescription, medications });
-                      }}
-                      placeholder="1 cp 3x/jour"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Durée
-                    </label>
-                    <input
-                      type="text"
-                      value={medication.duration}
-                      onChange={(e) => {
-                        const medications = [...newPrescription.medications];
-                        medications[index].duration = e.target.value;
-                        setNewPrescription({ ...newPrescription, medications });
-                      }}
-                      placeholder="7 jours"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Quantité
-                    </label>
-                    <input
-                      type="text"
-                      value={medication.quantity}
-                      onChange={(e) => {
-                        const medications = [...newPrescription.medications];
-                        medications[index].quantity = e.target.value;
-                        setNewPrescription({ ...newPrescription, medications });
-                      }}
-                      placeholder="21 comprimés"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    {newPrescription.medications.length > 1 && (
-                      <button
-                        onClick={() => removeMedication(index)}
-                        className="w-full px-3 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
-                      >
-                        Supprimer
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row gap-4 mb-6">

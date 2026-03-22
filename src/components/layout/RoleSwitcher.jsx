@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Shield, ChevronDown } from 'lucide-react';
 
 const roleLabels = {
-  SUPER_ADMIN: 'Super Admin',
+  ADMIN_CLINIQUE: 'Super Admin',
   ADMIN_CLINIQUE: 'Admin Clinique',
   MEDECIN: 'Médecin',
   RECEPTION: 'Réception'
@@ -13,8 +13,8 @@ export default function RoleSwitcher() {
   const { user, switchRole, ROLES } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Seul le SUPER_ADMIN peut changer de rôle pour tester
-  if (user?.role !== ROLES.SUPER_ADMIN) {
+  // Seul le ADMIN_CLINIQUE peut changer de rôle pour tester
+  if (user?.role !== ROLES.ADMIN_CLINIQUE) {
     return (
       <div className="flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg">
         <Shield className="w-4 h-4 text-blue-600" />
