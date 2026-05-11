@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { insuranceService } from '../../services/insuranceService';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
+import ToastContainer from '../../components/common/ToastContainer';
+import { useToast } from '../../hooks/useToast';
 import {
   Plus,
   Upload,
@@ -22,6 +25,7 @@ import {
 
 export default function InsuranceManagement() {
   const { user, hasPermission, PERMISSIONS } = useAuth();
+  const { toasts, showSuccess, showError, showWarning, removeToast } = useToast();
   const [activeTab, setActiveTab] = useState('mutuelles');
 
   // États pour les mutuelles
@@ -34,13 +38,13 @@ export default function InsuranceManagement() {
 
   // États généraux
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   // États pour les modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
 
   // États pour les formulaires
@@ -85,7 +89,7 @@ export default function InsuranceManagement() {
       setMutuelles(mutuellesData);
       setAssurancesPrivees(assurancesData);
     } catch (error) {
-      setError('Erreur lors du chargement des données: ' + error.message);
+      showError('Erreur lors du chargement des données: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -128,17 +132,17 @@ export default function InsuranceManagement() {
       setLoading(true);
       if (activeTab === 'mutuelles') {
         await insuranceService.createMutuelle(newItem);
-        setSuccess('Mutuelle créée avec succès');
+        showSuccess(`Mutuelle "${newItem.name}" créée avec succès`);
       } else {
         await insuranceService.createAssurancePrivee(newItem);
-        setSuccess('Assurance privée créée avec succès');
+        showSuccess(`Assurance privée "${newItem.name}" créée avec succès`);
       }
 
       resetForm();
       setShowCreateModal(false);
       await loadData();
     } catch (error) {
-      setError('Erreur lors de la création: ' + error.message);
+      showError('Erreur lors de la création: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -149,41 +153,46 @@ export default function InsuranceManagement() {
       setLoading(true);
       if (activeTab === 'mutuelles') {
         await insuranceService.updateMutuelle(editingItem.id, newItem);
-        setSuccess('Mutuelle mise à jour avec succès');
+        showSuccess(`Mutuelle "${newItem.name}" mise à jour avec succès`);
       } else {
         await insuranceService.updateAssurancePrivee(editingItem.id, newItem);
-        setSuccess('Assurance privée mise à jour avec succès');
+        showSuccess(`Assurance privée "${newItem.name}" mise à jour avec succès`);
       }
 
       resetForm();
       setShowCreateModal(false);
       await loadData();
     } catch (error) {
-      setError('Erreur lors de la mise à jour: ' + error.message);
+      showError('Erreur lors de la mise à jour: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) return;
-
+  const handleDelete = async () => {
     try {
       setLoading(true);
       if (activeTab === 'mutuelles') {
-        await insuranceService.deleteMutuelle(id);
-        setSuccess('Mutuelle supprimée avec succès');
+        await insuranceService.deleteMutuelle(itemToDelete.id);
+        showSuccess(`Mutuelle "${itemToDelete.name}" supprimée avec succès`);
       } else {
-        await insuranceService.deleteAssurancePrivee(id);
-        setSuccess('Assurance privée supprimée avec succès');
+        await insuranceService.deleteAssurancePrivee(itemToDelete.id);
+        showSuccess(`Assurance privée "${itemToDelete.name}" supprimée avec succès`);
       }
 
       await loadData();
     } catch (error) {
-      setError('Erreur lors de la suppression: ' + error.message);
+      showError('Erreur lors de la suppression: ' + error.message);
     } finally {
       setLoading(false);
+      setShowDeleteModal(false);
+      setItemToDelete(null);
     }
+  };
+
+  const confirmDelete = (item) => {
+    setItemToDelete(item);
+    setShowDeleteModal(true);
   };
 
   const handleEdit = (item) => {
@@ -225,24 +234,24 @@ export default function InsuranceManagement() {
 
       clearInterval(progressInterval);
       setImportProgress(100);
-      setSuccess('Import Excel réussi');
+      showSuccess('Import Excel réussi avec succès');
       setShowImportModal(false);
       setImportFile(null);
       await loadData();
     } catch (error) {
-      setError('Erreur lors de l\'import Excel: ' + error.message);
+      showError('Erreur lors de l\'import Excel: ' + error.message);
     } finally {
       setImporting(false);
       setImportProgress(0);
     }
   };
 
-  const downloadTemplate = async () => {
+  const exportToExcel = async () => {
     try {
-      await insuranceService.downloadExcelTemplate(activeTab === 'mutuelles' ? 'mutuelle' : 'assurance-privee');
-      setSuccess('Template téléchargé avec succès');
+      await insuranceService.exportToExcel(activeTab === 'mutuelles' ? 'mutuelle' : 'assurance-privee');
+      showSuccess('Export Excel terminé avec succès');
     } catch (error) {
-      setError('Erreur lors du téléchargement: ' + error.message);
+      showError('Erreur lors de l\'export: ' + error.message);
     }
   };
 
@@ -272,11 +281,11 @@ export default function InsuranceManagement() {
 
           <div className="flex space-x-3">
             <button
-              onClick={downloadTemplate}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              onClick={exportToExcel}
+              className="flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Template Excel
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Exporter données
             </button>
 
             <button
@@ -300,32 +309,7 @@ export default function InsuranceManagement() {
           </div>
         </div>
 
-        {/* Messages */}
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
-            <AlertCircle className="w-5 h-5 text-red-600 mr-3" />
-            <span className="text-red-700">{error}</span>
-            <button
-              onClick={() => setError('')}
-              className="ml-auto text-red-600 hover:text-red-800"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
 
-        {success && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
-            <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
-            <span className="text-green-700">{success}</span>
-            <button
-              onClick={() => setSuccess('')}
-              className="ml-auto text-green-600 hover:text-green-800"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
 
         {/* Tabs */}
         <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
@@ -416,7 +400,12 @@ export default function InsuranceManagement() {
                       {item.contactInfo?.email && (
                         <div>✉️ {item.contactInfo.email}</div>
                       )}
-                      {!item.contactInfo?.phone && !item.contactInfo?.email && '-'}
+                      {item.contactInfo?.website && (
+                        <div>🌐 <a href={item.contactInfo.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{item.contactInfo.website}</a></div>
+                      )}
+                      {!item.contactInfo?.phone && !item.contactInfo?.email && !item.contactInfo?.website && (
+                        <span className="text-orange-500 text-xs italic">Aucun contact renseigné</span>
+                      )}
                     </div>
                   </td>
 
@@ -439,7 +428,7 @@ export default function InsuranceManagement() {
                     </button>
 
                     <button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => confirmDelete(item)}
                       className="text-red-600 hover:text-red-900"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -704,15 +693,10 @@ export default function InsuranceManagement() {
                         <code className="bg-blue-100 px-1 rounded ml-1">Code</code>,
                         <code className="bg-blue-100 px-1 rounded ml-1">Description</code>,
                         <code className="bg-blue-100 px-1 rounded ml-1">Téléphone</code>,
-                        <code className="bg-blue-100 px-1 rounded ml-1">Email</code>
+                        <code className="bg-blue-100 px-1 rounded ml-1">Email</code>,
+                        <code className="bg-blue-100 px-1 rounded ml-1">Site Web</code>,
+                        <code className="bg-blue-100 px-1 rounded ml-1">Adresse</code>
                       </p>
-                      <button
-                        onClick={downloadTemplate}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-flex items-center"
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        Télécharger le template
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -743,6 +727,24 @@ export default function InsuranceManagement() {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setItemToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title="Confirmer la suppression"
+        message={`Êtes-vous sûr de vouloir supprimer ${activeTab === 'mutuelles' ? 'cette mutuelle' : 'cette assurance privée'} "${itemToDelete?.name}" ?\n\nCette action est irréversible.`}
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        type="danger"
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

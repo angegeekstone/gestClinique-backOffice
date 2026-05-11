@@ -152,7 +152,7 @@ export default function DashboardProgressive() {
                 <div className="ml-3">
                   <p className="text-sm text-gray-600">Revenus</p>
                   <p className="text-2xl font-bold text-purple-600">
-                    €{data.revenueSummary?.totalRevenue?.toLocaleString() || 0}
+                    {data.revenueSummary?.totalRevenue?.toLocaleString() || 0} FCFA
                   </p>
                 </div>
               </div>

@@ -147,6 +147,9 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                       : user?.username || 'Utilisateur'}
                   </p>
                   <p className="text-sm text-gray-500">{user?.email || ''}</p>
+                  {user?.speciality && (
+                    <p className="text-xs text-blue-600 font-medium mt-1">{user.speciality}</p>
+                  )}
                   {user?.role && (
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
                       {user.role}

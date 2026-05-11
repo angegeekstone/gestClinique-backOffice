@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { userService } from '../../services/userService';
+import revenueService from '../../services/revenueService';
 import {
   DollarSign,
   TrendingUp,
@@ -16,7 +16,8 @@ import {
   Filter,
   BarChart3,
   PieChart,
-  Euro
+  Euro,
+  Clock
 } from 'lucide-react';
 
 export default function RevenueReports() {
@@ -54,84 +55,78 @@ export default function RevenueReports() {
     try {
       setLoading(true);
 
-      // Charger les données des médecins et spécialités
-      const [usersData, specialitiesData] = await Promise.all([
-        userService.getAllUsers().catch(() => []),
-        userService.getAllSpecialities().catch(() => [])
-      ]);
-
-      const doctors = usersData.filter(user => user.role === 'MEDECIN');
-
-      // Simuler les revenus (en attendant les endpoints financiers)
-      const totalConsultations = doctors.length * 25;
-      const averagePrice = 65;
-      const monthlyRevenue = totalConsultations * averagePrice;
+      // Charger les vraies statistiques de revenus depuis l'API
+      const statsData = await revenueService.getRevenueStats(dateRange.startDate, dateRange.endDate);
 
       setRevenueStats({
-        totalRevenue: monthlyRevenue * 12, // Estimation annuelle
-        monthlyRevenue: monthlyRevenue,
-        variation: 12,
-        averagePerConsultation: averagePrice,
-        pendingPayments: Math.floor(monthlyRevenue * 0.15) // 15% en attente
+        totalRevenue: statsData.totalRevenue || 0,
+        monthlyRevenue: statsData.totalRevenue || 0, // Pour la période sélectionnée
+        variation: statsData.growthRate || 0,
+        averagePerConsultation: statsData.averageTransactionAmount || 0,
+        pendingPayments: statsData.pendingAmount || 0
       });
 
-      // Revenus par médecin
-      setDoctorRevenue(doctors.map(doctor => {
-        const consultations = Math.floor(Math.random() * 20) + 15;
-        const revenue = consultations * (averagePrice + Math.floor(Math.random() * 30 - 15));
-        return {
-          id: doctor.id,
-          name: `${doctor.firstName} ${doctor.lastName}`,
-          speciality: doctor.speciality?.name || 'Non définie',
-          consultations: consultations,
-          revenue: revenue,
-          averagePrice: Math.round(revenue / consultations),
-          pendingAmount: Math.floor(revenue * 0.1) // 10% en attente
-        };
-      }));
+      // Revenus par médecin depuis l'API
+      const doctorData = statsData.byDoctor || [];
+      setDoctorRevenue(doctorData.map(doctor => ({
+        id: doctor.doctorId,
+        name: doctor.doctorName,
+        speciality: doctor.speciality,
+        consultations: doctor.consultationCount,
+        revenue: doctor.totalRevenue,
+        averagePrice: doctor.averagePrice,
+        pendingAmount: doctor.pendingAmount || 0
+      })));
 
-      // Revenus par spécialité
-      setSpecialityRevenue(specialitiesData.map(spec => {
-        const doctorsInSpec = doctors.filter(d => d.speciality?.id === spec.id).length;
-        const consultations = doctorsInSpec * 25;
-        const revenue = consultations * (averagePrice + Math.floor(Math.random() * 20 - 10));
-        return {
-          id: spec.id,
-          name: spec.name,
-          doctorsCount: doctorsInSpec,
-          consultations: consultations,
-          revenue: revenue,
-          percentage: doctorsInSpec > 0 ? Math.round((revenue / monthlyRevenue) * 100) : 0
-        };
-      }).filter(spec => spec.doctorsCount > 0));
+      // Revenus par spécialité depuis l'API
+      const specialityData = statsData.bySpeciality || [];
+      setSpecialityRevenue(specialityData.map(spec => ({
+        id: spec.specialityId,
+        name: spec.specialityName,
+        doctorsCount: spec.doctorsCount || 0,
+        consultations: spec.consultationCount,
+        revenue: spec.totalRevenue,
+        percentage: spec.marketShare || 0
+      })));
 
-      // Revenus journaliers des 30 derniers jours
-      const last30Days = Array.from({length: 30}, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (29 - i));
-        const dailyConsultations = Math.floor(Math.random() * 8) + 2;
-        return {
-          date: date.toISOString().split('T')[0],
-          revenue: dailyConsultations * averagePrice,
-          consultations: dailyConsultations
-        };
-      });
+      // Tendances journalières depuis l'API
+      const dailyData = statsData.dailyTrends || [];
+      setDailyRevenue(dailyData.map(day => ({
+        date: day.date,
+        revenue: day.revenue,
+        consultations: day.consultationCount
+      })));
 
-      setDailyRevenue(last30Days);
-
-      // Méthodes de paiement simulées
-      setPaymentMethods([
-        { method: 'Carte Bancaire', amount: monthlyRevenue * 0.6, percentage: 60 },
-        { method: 'Espèces', amount: monthlyRevenue * 0.25, percentage: 25 },
-        { method: 'Chèque', amount: monthlyRevenue * 0.10, percentage: 10 },
-        { method: 'Virement', amount: monthlyRevenue * 0.05, percentage: 5 }
-      ]);
+      // Méthodes de paiement depuis l'API
+      const paymentData = statsData.paymentMethods || [];
+      setPaymentMethods(paymentData.map(method => ({
+        method: getPaymentMethodLabel(method.method),
+        amount: method.amount,
+        percentage: method.percentage
+      })));
 
     } catch (error) {
       console.error('Erreur chargement revenus:', error);
       showNotification('error', 'Erreur lors du chargement des données de revenus');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getPaymentMethodLabel = (method) => {
+    switch (method?.toUpperCase()) {
+      case 'CASH':
+        return 'Espèces';
+      case 'CARD':
+        return 'Carte Bancaire';
+      case 'MOBILE':
+        return 'Paiement Mobile';
+      case 'BANK_TRANSFER':
+        return 'Virement Bancaire';
+      case 'CHECK':
+        return 'Chèque';
+      default:
+        return method || 'Non défini';
     }
   };
 
@@ -152,7 +147,7 @@ export default function RevenueReports() {
         <div>
           <p className="text-sm text-gray-600">{title}</p>
           <p className="text-2xl font-bold text-gray-900">
-            {format === 'currency' ? `${typeof value === 'number' ? value.toLocaleString() : value}€` :
+            {format === 'currency' ? `${typeof value === 'number' ? value.toLocaleString() : value} FCFA` :
              typeof value === 'number' ? value.toLocaleString() : value}
           </p>
           <p className="text-sm text-gray-500">{subValue}</p>
@@ -225,20 +220,6 @@ export default function RevenueReports() {
         </div>
       </div>
 
-      {/* Alert sur les données manquantes */}
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="flex items-center">
-          <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-          <div>
-            <p className="text-red-800 text-sm font-medium">Fonctionnalité financière incomplète</p>
-            <p className="text-red-700 text-sm">
-              Les modèles backend ne contiennent pas de champs financiers (prix, paiements).
-              Ces rapports utilisent des données simulées.
-              <strong>Endpoints à créer :</strong> <code>/api/admin/reports/revenue/*</code>
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -322,7 +303,7 @@ export default function RevenueReports() {
                         <div
                           className="bg-green-500 rounded-t w-full min-h-[10px]"
                           style={{ height: `${height}px` }}
-                          title={`${day.revenue}€ - ${day.consultations} consultations`}
+                          title={`${day.revenue} FCFA - ${day.consultations} consultations`}
                         />
                         <span className="text-xs text-gray-500 mt-2 rotate-45 origin-bottom-left">
                           {new Date(day.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
@@ -347,7 +328,7 @@ export default function RevenueReports() {
                         <span className="font-medium text-gray-900">{method.method}</span>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-gray-900">{method.amount.toLocaleString()}€</p>
+                        <p className="font-semibold text-gray-900">{method.amount.toLocaleString()} FCFA</p>
                         <p className="text-sm text-gray-600">{method.percentage}%</p>
                       </div>
                       <div className="w-24 bg-gray-200 rounded-full h-2 ml-4">
@@ -414,9 +395,9 @@ export default function RevenueReports() {
                             <td className="py-4 px-4 font-medium text-gray-900">{doctor.name}</td>
                             <td className="py-4 px-4 text-gray-600">{doctor.speciality}</td>
                             <td className="py-4 px-4 text-gray-900">{doctor.consultations}</td>
-                            <td className="py-4 px-4 font-semibold text-green-600">{doctor.revenue.toLocaleString()}€</td>
-                            <td className="py-4 px-4 text-gray-900">{doctor.averagePrice}€</td>
-                            <td className="py-4 px-4 text-amber-600">{doctor.pendingAmount.toLocaleString()}€</td>
+                            <td className="py-4 px-4 font-semibold text-green-600">{doctor.revenue.toLocaleString()} FCFA</td>
+                            <td className="py-4 px-4 text-gray-900">{doctor.averagePrice} FCFA</td>
+                            <td className="py-4 px-4 text-amber-600">{doctor.pendingAmount.toLocaleString()} FCFA</td>
                           </tr>
                         ))}
                     </tbody>
@@ -441,7 +422,7 @@ export default function RevenueReports() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Revenus</span>
-                        <span className="font-semibold text-green-600">{spec.revenue.toLocaleString()}€</span>
+                        <span className="font-semibold text-green-600">{spec.revenue.toLocaleString()} FCFA</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Consultations</span>
@@ -508,7 +489,7 @@ export default function RevenueReports() {
                           <span className="font-medium text-gray-900">{method.method}</span>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900">{method.amount.toLocaleString()}€</p>
+                          <p className="font-semibold text-gray-900">{method.amount.toLocaleString()} FCFA</p>
                           <p className="text-sm text-gray-600">{method.percentage}% du total</p>
                         </div>
                       </div>
@@ -526,7 +507,7 @@ export default function RevenueReports() {
                         <span className="font-medium text-green-900">Payé</span>
                       </div>
                       <span className="font-semibold text-green-900">
-                        {(revenueStats.monthlyRevenue - revenueStats.pendingPayments).toLocaleString()}€
+                        {(revenueStats.monthlyRevenue - revenueStats.pendingPayments).toLocaleString()} FCFA
                       </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -535,7 +516,7 @@ export default function RevenueReports() {
                         <span className="font-medium text-amber-900">En attente</span>
                       </div>
                       <span className="font-semibold text-amber-900">
-                        {revenueStats.pendingPayments.toLocaleString()}€
+                        {revenueStats.pendingPayments.toLocaleString()} FCFA
                       </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -544,7 +525,7 @@ export default function RevenueReports() {
                         <span className="font-medium text-red-900">Impayé</span>
                       </div>
                       <span className="font-semibold text-red-900">
-                        {Math.floor(revenueStats.monthlyRevenue * 0.05).toLocaleString()}€
+                        {Math.floor(revenueStats.monthlyRevenue * 0.05).toLocaleString()} FCFA
                       </span>
                     </div>
                   </div>

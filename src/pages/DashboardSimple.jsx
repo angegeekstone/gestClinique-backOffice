@@ -88,7 +88,7 @@ export default function DashboardSimple() {
             <DollarSign className="h-12 w-12 text-purple-600" />
             <div className="ml-4">
               <h3 className="text-lg font-semibold text-gray-900">Revenus</h3>
-              <p className="text-3xl font-bold text-purple-600">€{data.revenue.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-purple-600">{data.revenue.toLocaleString()} FCFA</p>
             </div>
           </div>
         </div>

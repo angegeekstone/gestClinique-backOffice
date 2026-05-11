@@ -120,7 +120,7 @@ export default function DashboardNew() {
     },
     {
       title: "Revenus Mensuel",
-      value: `€${revenueData.totalRevenue?.toLocaleString() || "0"}`,
+      value: `${revenueData.totalRevenue?.toLocaleString() || "0"} FCFA`,
       change: revenueData.growthRate || 0,
       changeType: revenueData.growthRate > 0 ? "increase" : revenueData.growthRate < 0 ? "decrease" : "neutral",
       icon: DollarSign

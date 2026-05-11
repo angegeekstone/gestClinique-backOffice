@@ -19,7 +19,11 @@ import {
   CreditCard,
   Database,
   UserPlus,
-  DollarSign
+  DollarSign,
+  Search,
+  Clock,
+  UserX,
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../utils/cn';
@@ -37,7 +41,7 @@ const getMenuItemsForRole = (role, permissions) => {
   ];
 
   const roleSpecificItems = {
-    ADMIN_CLINIQUE: [
+    SUPER_ADMIN: [
       {
         title: 'Gestion Cliniques',
         icon: Building,
@@ -175,23 +179,37 @@ const getMenuItemsForRole = (role, permissions) => {
     ],
     RECEPTION: [
       {
-        title: 'RDV du Jour',
+        title: 'Planning du Jour',
         icon: Calendar,
-        href: '/reception/rdv-du-jour',
+        href: '/reception/planning',
         badge: 'AUJOURD\'HUI',
-        badgeColor: 'bg-green-100 text-green-800'
+        badgeColor: 'bg-green-100 text-green-800',
+        children: [
+          { title: 'RDV du jour', href: '/reception/rdv-du-jour', badge: 'Actuel' },
+          { title: 'Arrivées patients', href: '/reception/arrivees', badge: 'Check-in' },
+          { title: 'Salle d\'attente', href: '/reception/attente', badge: 'En cours' },
+        ]
       },
       {
-        title: 'Patients',
+        title: 'Gestion Patients',
         icon: Users,
         href: '/reception/patients',
         badge: 'GESTION',
-        badgeColor: 'bg-blue-100 text-blue-800',
-        children: [
-          { title: 'Liste des patients', href: '/reception/patients', badge: 'Actif' },
-          { title: 'Nouveau patient', href: '/reception/patients/nouveau', badge: 'Créer' },
-          { title: 'Recherche', href: '/reception/patients/recherche', badge: 'Chercher' },
-        ]
+        badgeColor: 'bg-blue-100 text-blue-800'
+      },
+      {
+        title: 'Recherche Rapide',
+        icon: Search,
+        href: '/reception/recherche',
+        badge: 'RECHERCHE',
+        badgeColor: 'bg-purple-100 text-purple-800'
+      },
+      {
+        title: 'Nouveau Patient',
+        icon: UserPlus,
+        href: '/reception/nouveau-patient',
+        badge: 'CRÉER',
+        badgeColor: 'bg-emerald-100 text-emerald-800'
       },
     ],
     CAISSE: [

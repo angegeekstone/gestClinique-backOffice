@@ -81,7 +81,7 @@ export default function AdminDashboard() {
         {
           id: 3,
           type: 'payment',
-          message: 'Paiement de 150€ reçu - Patient Martin',
+          message: 'Paiement de 150 FCFA reçu - Patient Martin',
           time: '1h',
           icon: DollarSign
         }

@@ -102,10 +102,11 @@ export const insuranceService = {
     }
   },
 
-  // Export Excel template
-  async downloadExcelTemplate(type) {
+
+  // Export des données existantes vers Excel
+  async exportToExcel(type) {
     try {
-      const response = await api.get(`/admin-clinique/excel-template/${type}`, {
+      const response = await api.get(`/admin-clinique/export-excel/${type}`, {
         responseType: 'blob'
       });
 
@@ -114,7 +115,8 @@ export const insuranceService = {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `template_${type}.xlsx`;
+      const currentDate = new Date().toISOString().split('T')[0];
+      link.download = `export_${type}_${currentDate}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -122,7 +124,7 @@ export const insuranceService = {
 
       return true;
     } catch (error) {
-      console.error('Erreur lors du téléchargement du template:', error);
+      console.error('Erreur lors de l\'export Excel:', error);
       throw error;
     }
   }

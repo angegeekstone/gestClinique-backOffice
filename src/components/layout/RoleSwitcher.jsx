@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Shield, ChevronDown } from 'lucide-react';
 
 const roleLabels = {
-  ADMIN_CLINIQUE: 'Super Admin',
+  SUPER_ADMIN: 'Super Admin',
   ADMIN_CLINIQUE: 'Admin Clinique',
   MEDECIN: 'Médecin',
   RECEPTION: 'Réception'

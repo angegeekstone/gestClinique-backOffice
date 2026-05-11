@@ -9,7 +9,7 @@ export default function ConnectionStatus({ status, isRefreshing }) {
           text: isRefreshing ? 'Actualisation...' : 'En ligne',
           color: isRefreshing ? 'text-blue-600' : 'text-green-600',
           bgColor: isRefreshing ? 'bg-blue-50' : 'bg-green-50',
-          borderColor: isRefreshing ? 'border-blue-200' : 'border-green-200'
+          borderColor:  isRefreshing ? 'border-blue-200' : 'border-green-200'
         };
       case 'offline':
         return {

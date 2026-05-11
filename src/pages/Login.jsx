@@ -17,7 +17,7 @@ const DEMO_ACCOUNTS = [
   {
     role: 'ADMIN_CLINIQUE',
     email: 'admin@gestclinique.com',
-    password: 'admin123',
+    password: 'Admin123',
     name: 'Alexandre Martin',
     description: 'Propriétaire système - Accès complet',
     icon: Building,
@@ -75,9 +75,18 @@ export default function Login() {
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = error.response?.data?.message 
-        || error.response?.data 
-        || 'Échec de la connexion. Vérifiez vos identifiants.';
+      let errorMessage = 'Échec de la connexion. Vérifiez vos identifiants.';
+
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      }
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -96,7 +105,19 @@ export default function Login() {
       navigate('/dashboard');
     } catch (error) {
       console.error('Quick login error:', error);
-      setError(error.response?.data?.message || 'Échec de la connexion');
+      let errorMessage = 'Échec de la connexion';
+
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      }
+
+      setError(errorMessage);
     }
   };
 

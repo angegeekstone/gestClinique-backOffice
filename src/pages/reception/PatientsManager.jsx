@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { patientService } from '../../services/patientService';
 import { insuranceService } from '../../services/insuranceService';
+import { appointmentService } from '../../services/appointmentService';
+import { specialityService } from '../../services/specialityService';
+import { doctorService } from '../../services/doctorService';
 import ConnectionStatus from '../../components/dashboard/ConnectionStatus';
 import {
   UserPlus,
@@ -184,99 +188,23 @@ const ASSURANCES_PRIVEES_LIST = [
   'MSH International'
 ].sort();
 
-// Données des médecins et leurs spécialités
-const DOCTORS_DATA = [
-  {
-    id: 1,
-    name: 'Dr. Martin',
-    specialty: 'cardiologie',
-    currentLoad: 15, // nombre de patients cette semaine
-    maxLoad: 25,
-    schedule: {
-      monday: ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'],
-      tuesday: ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'],
-      wednesday: ['09:00', '10:00', '11:00'],
-      thursday: ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'],
-      friday: ['09:00', '10:00', '11:00', '14:00', '15:00']
-    },
-    bookedSlots: [
-      '2024-12-18T09:00:00',
-      '2024-12-18T10:00:00',
-      '2024-12-19T14:00:00'
-    ]
-  },
-  {
-    id: 2,
-    name: 'Dr. Durand',
-    specialty: 'generaliste',
-    currentLoad: 20,
-    maxLoad: 30,
-    schedule: {
-      monday: ['08:30', '09:30', '10:30', '11:30', '14:30', '15:30', '16:30'],
-      tuesday: ['08:30', '09:30', '10:30', '11:30', '14:30', '15:30', '16:30'],
-      wednesday: ['08:30', '09:30', '10:30', '11:30'],
-      thursday: ['08:30', '09:30', '10:30', '11:30', '14:30', '15:30', '16:30'],
-      friday: ['08:30', '09:30', '10:30', '11:30', '14:30', '15:30']
-    },
-    bookedSlots: [
-      '2024-12-18T08:30:00',
-      '2024-12-18T14:30:00',
-      '2024-12-19T09:30:00'
-    ]
-  },
-  {
-    id: 3,
-    name: 'Dr. Bernard',
-    specialty: 'pediatrie',
-    currentLoad: 12,
-    maxLoad: 20,
-    schedule: {
-      monday: ['09:00', '10:00', '11:00', '14:00', '15:00'],
-      tuesday: ['09:00', '10:00', '11:00', '14:00', '15:00'],
-      wednesday: ['09:00', '10:00', '11:00'],
-      thursday: ['09:00', '10:00', '11:00', '14:00', '15:00'],
-      friday: ['09:00', '10:00', '11:00']
-    },
-    bookedSlots: [
-      '2024-12-18T11:00:00',
-      '2024-12-19T10:00:00'
-    ]
-  },
-  {
-    id: 4,
-    name: 'Dr. Moreau',
-    specialty: 'dermatologie',
-    currentLoad: 8,
-    maxLoad: 18,
-    schedule: {
-      tuesday: ['10:00', '11:00', '14:00', '15:00', '16:00'],
-      wednesday: ['10:00', '11:00', '14:00', '15:00'],
-      thursday: ['10:00', '11:00', '14:00', '15:00', '16:00'],
-      friday: ['10:00', '11:00', '14:00', '15:00']
-    },
-    bookedSlots: [
-      '2024-12-19T14:00:00'
-    ]
-  }
-];
-
-// Mapping spécialités vers médecins généralistes par défaut
-const SPECIALTY_MAPPING = {
-  '': 'generaliste', // médecine générale par défaut
-  'cardiologie': 'cardiologie',
-  'dermatologie': 'dermatologie',
-  'gynecologie': 'generaliste', // pas de gynécologue, orienter vers généraliste
-  'pediatrie': 'pediatrie',
-  'ophtalmologie': 'generaliste',
-  'orthopedie': 'generaliste',
-  'psychiatrie': 'generaliste',
-  'radiologie': 'generaliste',
-  'urgences': 'generaliste',
-  'autre': 'generaliste'
-};
 
 export default function PatientsManager() {
   const { user, hasRole, hasPermission, PERMISSIONS } = useAuth();
+  const location = useLocation();
+
+  // Détecter le mode d'utilisation basé sur la route
+  const getCurrentMode = () => {
+    if (location.pathname.includes('nouveau-patient')) {
+      return 'nouveau';
+    } else if (location.pathname.includes('recherche')) {
+      return 'recherche';
+    } else {
+      return 'liste';
+    }
+  };
+
+  const currentMode = getCurrentMode();
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -286,18 +214,24 @@ export default function PatientsManager() {
   const [mutuelles, setMutuelles] = useState([]);
   const [assurancesPrivees, setAssurancesPrivees] = useState([]);
   const [showNewPatientModal, setShowNewPatientModal] = useState(false);
+  const [showPatientDetailsModal, setShowPatientDetailsModal] = useState(false);
+  const [showEditPatientModal, setShowEditPatientModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [editingPatient, setEditingPatient] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [newPatient, setNewPatient] = useState({
     name: '',
     email: '',
-    phone: '',
+    phone: '+225 ',
     address: '',
     birthDate: '',
+    gender: 'OTHER',
     insuranceType: 'Sécurité Sociale',
-    emergencyContact: '',
+    insuranceNumber: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '+225 ',
     notes: '',
     preferredSpecialty: ''
   });
@@ -310,6 +244,8 @@ export default function PatientsManager() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isBookingAppointment, setIsBookingAppointment] = useState(false);
   const [newlyCreatedPatient, setNewlyCreatedPatient] = useState(null);
+  const [availableSpecialities, setAvailableSpecialities] = useState([]);
+  const [isLoadingSlotsData, setIsLoadingSlotsData] = useState(false);
 
   // États pour le check-in patient existant
   const [showCheckInModal, setShowCheckInModal] = useState(false);
@@ -331,6 +267,22 @@ export default function PatientsManager() {
   const canCreatePatients = hasPermission(PERMISSIONS.CREATE_PATIENTS);
   const canUpdatePatientInfo = hasPermission(PERMISSIONS.UPDATE_PATIENT_INFO);
   const canViewPatientContact = hasPermission(PERMISSIONS.VIEW_PATIENT_CONTACT);
+
+  // Charger les spécialités
+  const loadSpecialities = async () => {
+    try {
+      const specialities = await specialityService.getAllSpecialities();
+      setAvailableSpecialities(specialities);
+      console.log('✅ Spécialités chargées:', specialities.length);
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des spécialités:', error);
+      // Fallback avec spécialités par défaut
+      setAvailableSpecialities([
+        { id: 1, name: 'Généraliste', description: 'Médecine générale' },
+        { id: 2, name: 'Cardiologie', description: 'Spécialiste du cœur' }
+      ]);
+    }
+  };
 
   // Charger les données d'assurances
   const loadInsuranceData = async () => {
@@ -372,23 +324,28 @@ export default function PatientsManager() {
 
       const formattedPatients = patientsData.map(patient => ({
         id: patient.id,
-        name: `${patient.prenom || ''} ${patient.nom}`.trim(),
+        name: `${patient.firstName || ''} ${patient.lastName}`.trim(),
         email: patient.email,
-        phone: patient.telephone,
-        address: patient.adresse,
-        birthDate: patient.dateNaissance,
-        lastVisit: patient.derniereVisite || new Date().toISOString().split('T')[0],
-        nextAppointment: patient.prochainRdv || null,
-        status: 'active',
-        balance: 0,
-        medicalNumber: patient.numeroPatient,
-        insuranceType: patient.typeAssurance,
-        insuranceCompany: patient.compagnieAssurance,
-        emergencyContact: patient.contactUrgence,
-        notes: patient.notes || '',
-        preferredSpecialty: patient.specialitePrefere || '',
+        phone: patient.phoneNumber,
+        address: patient.address,
+        birthDate: patient.dateOfBirth,
+        lastVisit: patient.updatedAt ? patient.updatedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+        nextAppointment: null, // Pas disponible dans ReceptionPatientDTO
+        status: patient.isActive ? 'active' : 'inactive',
+        balance: 0, // Pas disponible pour la réception
+        medicalNumber: `P${String(patient.id).padStart(6, '0')}`,
+        insuranceType: 'Sécurité Sociale', // Valeur par défaut
+        insuranceCompany: null,
+        emergencyContact: patient.emergencyContactName && patient.emergencyContactPhone
+          ? `${patient.emergencyContactName} - ${patient.emergencyContactPhone}`
+          : '',
+        emergencyContactName: patient.emergencyContactName || '',
+        emergencyContactPhone: patient.emergencyContactPhone || '',
+        notes: patient.medicalHistory || '',
+        medicalHistory: patient.medicalHistory || '',
+        preferredSpecialty: '',
         isVip: false,
-        lastPayment: patient.dernierPaiement,
+        lastPayment: null,
         appointmentHistory: 0
       }));
 
@@ -396,50 +353,6 @@ export default function PatientsManager() {
       setConnectionStatus('online');
       setErrors({}); // Effacer les erreurs précédentes
       console.log('✅ Patients chargés depuis l\'API:', formattedPatients.length);
-
-      // Si aucun patient n'est retourné par l'API mais qu'elle fonctionne (code 200),
-      // ajouter quelques patients de test pour démontrer le compteur dynamique
-      if (formattedPatients.length === 0) {
-        console.log('ℹ️ Aucun patient dans l\'API - Ajout de patients de test');
-        const patientsTest = [
-          {
-            id: 'test-1',
-            name: 'Jean Martin',
-            email: 'jean.martin@test.com',
-            phone: '+225 07 12 34 56 78',
-            address: '123 Rue de la Paix, Abidjan',
-            birthDate: '1990-05-15',
-            lastVisit: new Date().toISOString().split('T')[0],
-            nextAppointment: null,
-            status: 'active',
-            balance: 0,
-            medicalNumber: 'TEST001',
-            insuranceType: 'Sécurité Sociale',
-            emergencyContact: 'Marie Martin - 07 11 22 33 44',
-            notes: 'Patient de test - données depuis API vide',
-            isVip: false
-          },
-          {
-            id: 'test-2',
-            name: 'Marie Dupont',
-            email: 'marie.dupont@test.com',
-            phone: '+225 05 23 45 67 89',
-            address: '456 Avenue des Jardins, Abidjan',
-            birthDate: '1985-03-20',
-            lastVisit: new Date().toISOString().split('T')[0],
-            nextAppointment: null,
-            status: 'active',
-            balance: 0,
-            medicalNumber: 'TEST002',
-            insuranceType: 'Mutuelle',
-            emergencyContact: 'Paul Dupont - 05 22 33 44 55',
-            notes: 'Patient de test - API connectée mais vide',
-            isVip: false
-          }
-        ];
-        setPatients(patientsTest);
-        console.log('✅ Patients de test ajoutés:', patientsTest.length);
-      }
     } catch (error) {
       console.error('Erreur lors du chargement des patients (API non disponible):', error.message);
 
@@ -473,7 +386,13 @@ export default function PatientsManager() {
     // Charger les données au montage du composant
     loadInsuranceData();
     loadPatients();
-  }, []);
+    loadSpecialities();
+
+    // Ouvrir automatiquement la modal en fonction du mode
+    if (currentMode === 'nouveau') {
+      setShowNewPatientModal(true);
+    }
+  }, [currentMode]);
 
   useEffect(() => {
     filterPatients();
@@ -491,6 +410,15 @@ export default function PatientsManager() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showInsuranceDropdown]);
+
+  // Charger les créneaux quand le modal RDV s'ouvre
+  useEffect(() => {
+    if (showAppointmentModal && newlyCreatedPatient) {
+      const specialtyToUse = newlyCreatedPatient.preferredSpecialty || 'Généraliste';
+      console.log('🔄 Chargement des créneaux pour:', specialtyToUse);
+      loadAvailableSlots(specialtyToUse);
+    }
+  }, [showAppointmentModal, newlyCreatedPatient, availableSpecialities]);
 
   const filterPatients = () => {
     let filtered = patients;
@@ -545,6 +473,178 @@ export default function PatientsManager() {
 
   const handlePatientSelect = (patient) => {
     setSelectedPatient(patient);
+    setShowPatientDetailsModal(true);
+  };
+
+  // Actions des boutons
+  const handleEditPatient = (patient) => {
+    // Préparer les données avec les préfixes téléphoniques si nécessaires
+    const patientData = {...patient};
+
+    // Ajouter +225 au téléphone principal s'il n'existe pas
+    if (patientData.phone && !patientData.phone.startsWith('+225')) {
+      patientData.phone = '+225 ' + patientData.phone.replace(/^\+?225?\s*/, '');
+    }
+
+    // Ajouter +225 au téléphone du contact d'urgence s'il n'existe pas
+    if (patientData.emergencyContactPhone && !patientData.emergencyContactPhone.startsWith('+225')) {
+      patientData.emergencyContactPhone = '+225 ' + patientData.emergencyContactPhone.replace(/^\+?225?\s*/, '');
+    }
+
+    // S'assurer que les antécédents médicaux sont bien copiés (peut venir de 'notes' ou 'medicalHistory')
+    if (!patientData.medicalHistory && patientData.notes) {
+      patientData.medicalHistory = patientData.notes;
+    }
+
+    // Debug : afficher les données du contact d'urgence et antécédents
+    console.log('🔍 Debug données patient:', {
+      emergencyContact: patientData.emergencyContact,
+      emergencyContactName: patientData.emergencyContactName,
+      emergencyContactPhone: patientData.emergencyContactPhone,
+      notes: patientData.notes,
+      medicalHistory: patientData.medicalHistory
+    });
+
+    // Extraire le contact d'urgence s'il est au format "Nom - Téléphone" et qu'on n'a pas les champs séparés
+    if (patientData.emergencyContact && (!patientData.emergencyContactName || !patientData.emergencyContactPhone)) {
+      const parts = patientData.emergencyContact.split(' - ');
+      if (parts.length === 2) {
+        if (!patientData.emergencyContactName) {
+          patientData.emergencyContactName = parts[0].trim();
+        }
+        if (!patientData.emergencyContactPhone) {
+          const phone = parts[1].trim();
+          patientData.emergencyContactPhone = phone.startsWith('+225') ? phone : '+225 ' + phone.replace(/^\+?225?\s*/, '');
+        }
+      }
+    }
+
+    // S'assurer qu'on a au moins les champs séparés même si emergencyContact existe
+    if (patientData.emergencyContact && !patientData.emergencyContactName && !patientData.emergencyContactPhone) {
+      // Essayer de parser même sans le délimiteur " - "
+      const contactText = patientData.emergencyContact.trim();
+      // Si ça ressemble à "Nom Prénom 07 XX XX XX XX", on essaie de séparer
+      const phoneMatch = contactText.match(/(.+?)(\+?225?\s*\d{2}\s*\d{2}\s*\d{2}\s*\d{2}\s*\d{2})$/);
+      if (phoneMatch) {
+        patientData.emergencyContactName = phoneMatch[1].trim();
+        const phone = phoneMatch[2].trim();
+        patientData.emergencyContactPhone = phone.startsWith('+225') ? phone : '+225 ' + phone.replace(/^\+?225?\s*/, '');
+      }
+    }
+
+    console.log('✅ Après parsing:', {
+      emergencyContactName: patientData.emergencyContactName,
+      emergencyContactPhone: patientData.emergencyContactPhone,
+      medicalHistory: patientData.medicalHistory,
+      notes: patientData.notes
+    });
+
+    setEditingPatient(patientData);
+    setShowEditPatientModal(true);
+    setErrors({});
+  };
+
+  // Validation du formulaire de modification patient
+  const validateEditingPatient = () => {
+    const newErrors = {};
+
+    if (!editingPatient.name?.trim()) {
+      newErrors.name = 'Le nom est obligatoire';
+    }
+
+    if (!editingPatient.phone?.trim()) {
+      newErrors.phone = 'Le téléphone est obligatoire';
+    } else if (!validatePhoneNumber(editingPatient.phone)) {
+      newErrors.phone = 'Le téléphone doit contenir exactement 10 chiffres après +225';
+    }
+
+    if (!editingPatient.email?.trim()) {
+      newErrors.email = 'L\'email est obligatoire';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editingPatient.email)) {
+      newErrors.email = 'Format d\'email invalide';
+    }
+
+    if (!editingPatient.birthDate) {
+      newErrors.birthDate = 'La date de naissance est obligatoire';
+    }
+
+    if (!editingPatient.address?.trim()) {
+      newErrors.address = 'L\'adresse est obligatoire';
+    }
+
+    if (!editingPatient.emergencyContactName?.trim()) {
+      newErrors.emergencyContactName = 'Le nom du contact d\'urgence est obligatoire';
+    }
+
+    if (!editingPatient.emergencyContactPhone?.trim()) {
+      newErrors.emergencyContactPhone = 'Le téléphone du contact d\'urgence est obligatoire';
+    } else if (!validatePhoneNumber(editingPatient.emergencyContactPhone)) {
+      newErrors.emergencyContactPhone = 'Le téléphone doit contenir exactement 10 chiffres après +225';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Mise à jour du patient
+  const handleUpdatePatient = async () => {
+    if (!validateEditingPatient()) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const patientData = {
+        firstName: editingPatient.name?.split(' ')[0] || '',
+        lastName: editingPatient.name?.split(' ').slice(1).join(' ') || '',
+        email: editingPatient.email,
+        phoneNumber: editingPatient.phone,
+        address: editingPatient.address,
+        dateOfBirth: editingPatient.birthDate,
+        gender: editingPatient.gender || 'MALE',
+        emergencyContactName: editingPatient.emergencyContactName,
+        emergencyContactPhone: editingPatient.emergencyContactPhone,
+        medicalHistory: editingPatient.medicalHistory || '',
+        isActive: editingPatient.status === 'active'
+      };
+
+      const updatedPatient = await patientService.updatePatient(editingPatient.id, patientData);
+
+      // Mettre à jour la liste des patients
+      setPatients(prev => prev.map(p =>
+        p.id === editingPatient.id
+          ? { ...p, ...updatedPatient, name: `${updatedPatient.firstName} ${updatedPatient.lastName}` }
+          : p
+      ));
+
+      setShowEditPatientModal(false);
+      setEditingPatient(null);
+      setErrors({});
+
+      // Recharger les patients pour avoir les données à jour
+      loadPatients();
+
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du patient:', error);
+
+      if (error.message.includes('403')) {
+        setConnectionStatus('error');
+      } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        setConnectionStatus('offline');
+      }
+
+      setErrors({
+        general: error.message || 'Erreur lors de la mise à jour du patient. Veuillez réessayer.'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePatientPayment = (patient) => {
+    console.log('Paiement pour patient:', patient);
+    // TODO: Ouvrir modal de paiement
+    alert('Fonctionnalité de paiement en cours de développement');
   };
 
   // Génération automatique du numéro patient
@@ -563,8 +663,8 @@ export default function PatientsManager() {
 
     if (!newPatient.phone.trim()) {
       newErrors.phone = 'Le téléphone est obligatoire';
-    } else if (!/^[\+]?[0-9\s\-\(\)]{10,}$/.test(newPatient.phone)) {
-      newErrors.phone = 'Format de téléphone invalide';
+    } else if (!validatePhoneNumber(newPatient.phone)) {
+      newErrors.phone = 'Le téléphone doit contenir exactement 10 chiffres après +225';
     }
 
     if (!newPatient.email.trim()) {
@@ -581,8 +681,36 @@ export default function PatientsManager() {
       newErrors.address = 'L\'adresse est obligatoire';
     }
 
-    if (!newPatient.emergencyContact.trim()) {
-      newErrors.emergencyContact = 'Le contact d\'urgence est obligatoire';
+    if (!newPatient.emergencyContactName.trim()) {
+      newErrors.emergencyContactName = 'Le nom du contact d\'urgence est obligatoire';
+    }
+
+    if (!newPatient.emergencyContactPhone.trim()) {
+      newErrors.emergencyContactPhone = 'Le téléphone du contact d\'urgence est obligatoire';
+    } else if (!validatePhoneNumber(newPatient.emergencyContactPhone)) {
+      newErrors.emergencyContactPhone = 'Le téléphone d\'urgence doit contenir exactement 10 chiffres après +225';
+    }
+
+    // Validation du numéro d'assurance
+    if (newPatient.insuranceType !== 'Autre' && !newPatient.insuranceNumber.trim()) {
+      newErrors.insuranceNumber = 'Le numéro d\'assurance est obligatoire pour ce type d\'assurance';
+    } else if (newPatient.insuranceNumber.trim()) {
+      // Validation spécifique selon le type
+      const insuranceNumber = newPatient.insuranceNumber.trim();
+
+      if (newPatient.insuranceType === 'Sécurité Sociale') {
+        if (!/^[0-9]{13}$/.test(insuranceNumber)) {
+          newErrors.insuranceNumber = 'Le numéro de sécurité sociale doit contenir 13 chiffres';
+        }
+      } else if (newPatient.insuranceType === 'CMU') {
+        if (!/^[A-Z0-9]{6,15}$/.test(insuranceNumber)) {
+          newErrors.insuranceNumber = 'Le numéro CMU doit contenir entre 6 et 15 caractères alphanumériques';
+        }
+      } else if (newPatient.insuranceType === 'Mutuelle' || newPatient.insuranceType === 'Assurance privée') {
+        if (!/^[A-Z0-9]{3,20}$/.test(insuranceNumber)) {
+          newErrors.insuranceNumber = 'Le numéro doit contenir entre 3 et 20 caractères alphanumériques';
+        }
+      }
     }
 
     // Vérification des doublons
@@ -610,23 +738,28 @@ export default function PatientsManager() {
     try {
       // Extraire prénom et nom du nom complet
       const nameParts = newPatient.name.trim().split(' ');
-      const prenom = nameParts[0] || '';
-      const nom = nameParts.slice(1).join(' ') || nameParts[0];
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || nameParts[0];
+
+      // Utiliser directement les champs séparés du contact d'urgence
+      const emergencyContactName = newPatient.emergencyContactName.trim();
+      const emergencyContactPhone = newPatient.emergencyContactPhone.trim();
 
       // Préparer les données pour l'API
       const patientData = {
-        nom: nom,
-        prenom: prenom,
+        firstName: firstName,
+        lastName: lastName,
         email: newPatient.email.trim().toLowerCase(),
-        telephone: newPatient.phone.trim(),
-        adresse: newPatient.address.trim(),
-        dateNaissance: newPatient.birthDate,
-        sexe: 'NON_SPECIFIE', // Valeur par défaut
-        typeAssurance: newPatient.insuranceType,
-        compagnieAssurance: newPatient.insuranceCompany || null,
-        contactUrgence: newPatient.emergencyContact.trim(),
-        notes: newPatient.notes.trim(),
-        specialitePrefere: newPatient.preferredSpecialty || null
+        phoneNumber: newPatient.phone.trim(),
+        address: newPatient.address.trim(),
+        dateOfBirth: newPatient.birthDate,
+        gender: newPatient.gender,
+        emergencyContactName: emergencyContactName,
+        emergencyContactPhone: emergencyContactPhone,
+        medicalHistory: newPatient.notes.trim(),
+        insuranceType: newPatient.insuranceType,
+        insuranceNumber: newPatient.insuranceNumber.trim(),
+        isActive: true
       };
 
       // Appel API pour créer le patient
@@ -635,21 +768,22 @@ export default function PatientsManager() {
       // Convertir la réponse API vers le format local pour l'affichage
       const patientToAdd = {
         id: createdPatient.id,
-        name: `${createdPatient.prenom || ''} ${createdPatient.nom}`.trim(),
+        name: `${createdPatient.firstName || ''} ${createdPatient.lastName}`.trim(),
         email: createdPatient.email,
-        phone: createdPatient.telephone,
-        address: createdPatient.adresse,
-        birthDate: createdPatient.dateNaissance,
+        phone: createdPatient.phoneNumber,
+        address: createdPatient.address,
+        birthDate: createdPatient.dateOfBirth,
         lastVisit: new Date().toISOString().split('T')[0],
         nextAppointment: null,
         status: 'new',
         balance: 0,
-        medicalNumber: createdPatient.numeroPatient,
-        insuranceType: createdPatient.typeAssurance,
-        insuranceCompany: createdPatient.compagnieAssurance,
-        emergencyContact: createdPatient.contactUrgence,
-        notes: createdPatient.notes,
-        preferredSpecialty: createdPatient.specialitePrefere,
+        medicalNumber: `P${String(createdPatient.id).padStart(6, '0')}`,
+        insuranceType: newPatient.insuranceType, // Garder depuis le form car pas retourné par l'API
+        insuranceNumber: newPatient.insuranceNumber,
+        insuranceCompany: newPatient.insuranceCompany,
+        emergencyContact: `${createdPatient.emergencyContactName || ''} - ${createdPatient.emergencyContactPhone || ''}`.replace(' - ', '').trim(),
+        notes: createdPatient.medicalHistory || '',
+        preferredSpecialty: newPatient.preferredSpecialty,
         isVip: false,
         lastPayment: null,
         appointmentHistory: 0
@@ -660,14 +794,12 @@ export default function PatientsManager() {
       setShowNewPatientModal(false);
       resetNewPatientForm();
 
-      // Proposition automatique de RDV
-      const specialty = patientToAdd.preferredSpecialty || '';
-      const suggestedAppointments = getSuggestedAppointments(specialty);
+      // Chargement automatique des créneaux via API
+      const specialtyToUse = patientToAdd.preferredSpecialty || 'Généraliste';
+      console.log('🔄 Chargement des créneaux pour:', specialtyToUse);
 
-      if (suggestedAppointments.length > 0) {
-        setSuggestedSlots(suggestedAppointments);
-        setShowAppointmentModal(true);
-      }
+      // Déclencher le chargement des créneaux qui ouvrira automatiquement le modal
+      setShowAppointmentModal(true);
 
       console.log('Patient créé avec succès:', createdPatient);
 
@@ -690,20 +822,121 @@ export default function PatientsManager() {
     }
   };
 
+  // Charger les créneaux disponibles pour une spécialité
+  const loadAvailableSlots = async (specialityName) => {
+    setIsLoadingSlotsData(true);
+    try {
+      // Trouver l'ID de la spécialité
+      const speciality = availableSpecialities.find(s =>
+        s.name.toLowerCase() === specialityName.toLowerCase()
+      );
+
+      if (!speciality) {
+        console.warn('Spécialité non trouvée:', specialityName);
+        setSuggestedSlots([]);
+        return;
+      }
+
+      // Récupérer les médecins de cette spécialité
+      const doctors = await doctorService.getDoctorsBySpeciality(speciality.id);
+      console.log('Médecins trouvés:', doctors);
+
+      // Récupérer les créneaux disponibles pour chaque médecin
+      const allSlots = [];
+      for (const doctor of doctors) {
+        const slots = await doctorService.getAvailableSlots(doctor.id);
+        allSlots.push(...slots);
+      }
+
+      // Trier par charge du médecin (moins chargé en premier)
+      const sortedSlots = allSlots.sort((a, b) => {
+        const loadA = a.load / a.doctor.maxLoad;
+        const loadB = b.load / b.doctor.maxLoad;
+        return loadA - loadB;
+      });
+
+      // Limiter aux 6 premiers créneaux
+      setSuggestedSlots(sortedSlots.slice(0, 6));
+      console.log('✅ Créneaux chargés:', sortedSlots.length);
+
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des créneaux:', error);
+      setSuggestedSlots([]);
+    } finally {
+      setIsLoadingSlotsData(false);
+    }
+  };
+
   // Reset du formulaire
   const resetNewPatientForm = () => {
     setNewPatient({
       name: '',
       email: '',
-      phone: '',
+      phone: '+225 ',
       address: '',
       birthDate: '',
+      gender: 'OTHER',
       insuranceType: 'Sécurité Sociale',
-      emergencyContact: '',
+      insuranceNumber: '',
+      emergencyContactName: '',
+      emergencyContactPhone: '+225 ',
       notes: '',
       preferredSpecialty: ''
     });
     setErrors({});
+  };
+
+  // Fonction pour réserver un créneau de RDV
+  const handleBookAppointment = async () => {
+    if (!selectedSlot || !newlyCreatedPatient) {
+      console.error('Pas de créneau sélectionné ou de patient');
+      return;
+    }
+
+    setIsBookingAppointment(true);
+    try {
+      // Préparer les données du RDV
+      const appointmentData = {
+        patientId: newlyCreatedPatient.id,
+        doctorId: selectedSlot.doctor.id,
+        appointmentDateTime: `${selectedSlot.date}T${selectedSlot.time}:00`,
+        appointmentType: 'CONSULTATION',
+        status: 'SCHEDULED',
+        notes: `RDV créé automatiquement après création du patient ${newlyCreatedPatient.name}`,
+        duration: selectedSlot.duration || 30
+      };
+
+      console.log('📅 Création du RDV:', appointmentData);
+
+      // Appeler l'API pour créer le RDV
+      const createdAppointment = await appointmentService.createAppointment(appointmentData);
+
+      console.log('✅ RDV créé avec succès:', createdAppointment);
+
+      // Fermer le modal et nettoyer les états
+      setShowAppointmentModal(false);
+      setNewlyCreatedPatient(null);
+      setSuggestedSlots([]);
+      setSelectedSlot(null);
+
+      // Afficher un message de succès (vous pourriez utiliser un toast/notification ici)
+      alert(`RDV programmé avec succès!\n\nPatient: ${newlyCreatedPatient.name}\nMédecin: ${selectedSlot.doctor.name}\nDate: ${selectedSlot.date} à ${selectedSlot.time}`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la création du RDV:', error);
+
+      // Afficher l'erreur à l'utilisateur
+      let errorMessage = 'Erreur lors de la création du rendez-vous.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      alert(`Erreur: ${errorMessage}`);
+    } finally {
+      setIsBookingAppointment(false);
+    }
   };
 
   // Fermeture du modal
@@ -715,8 +948,50 @@ export default function PatientsManager() {
   };
 
   // Gestion des changements dans le formulaire
+  // Format phone number with +225 prefix and validate 10 digits
+  const formatPhoneNumber = (value) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // If it starts with 225, remove it to avoid duplication
+    const cleanDigits = digits.startsWith('225') ? digits.substring(3) : digits;
+
+    // Limit to 10 digits
+    const limitedDigits = cleanDigits.substring(0, 10);
+
+    // Format as +225 XX XX XX XX XX
+    if (limitedDigits.length === 0) {
+      return '+225 ';
+    } else if (limitedDigits.length <= 2) {
+      return `+225 ${limitedDigits}`;
+    } else if (limitedDigits.length <= 4) {
+      return `+225 ${limitedDigits.substring(0, 2)} ${limitedDigits.substring(2)}`;
+    } else if (limitedDigits.length <= 6) {
+      return `+225 ${limitedDigits.substring(0, 2)} ${limitedDigits.substring(2, 4)} ${limitedDigits.substring(4)}`;
+    } else if (limitedDigits.length <= 8) {
+      return `+225 ${limitedDigits.substring(0, 2)} ${limitedDigits.substring(2, 4)} ${limitedDigits.substring(4, 6)} ${limitedDigits.substring(6)}`;
+    } else {
+      return `+225 ${limitedDigits.substring(0, 2)} ${limitedDigits.substring(2, 4)} ${limitedDigits.substring(4, 6)} ${limitedDigits.substring(6, 8)} ${limitedDigits.substring(8)}`;
+    }
+  };
+
+  // Validate phone number has exactly 10 digits after +225
+  const validatePhoneNumber = (value) => {
+    const digits = value.replace(/\D/g, '');
+    const phoneDigits = digits.startsWith('225') ? digits.substring(3) : digits;
+    return phoneDigits.length === 10;
+  };
+
+
   const handleNewPatientChange = (field, value) => {
-    setNewPatient(prev => ({ ...prev, [field]: value }));
+    let processedValue = value;
+
+    // Handle phone number formatting
+    if (field === 'phone' || field === 'emergencyContactPhone') {
+      processedValue = formatPhoneNumber(value);
+    }
+
+    setNewPatient(prev => ({ ...prev, [field]: processedValue }));
 
     // Supprimer l'erreur si le champ devient valide
     if (errors[field]) {
@@ -771,132 +1046,30 @@ export default function PatientsManager() {
     return days[date.getDay()];
   };
 
-  // Trouver les médecins par spécialité
-  const findDoctorsBySpecialty = (specialty) => {
-    const mappedSpecialty = SPECIALTY_MAPPING[specialty] || 'generaliste';
-    return DOCTORS_DATA.filter(doctor => doctor.specialty === mappedSpecialty);
-  };
-
-  // Générer les créneaux disponibles pour un médecin sur une période
-  const getAvailableSlots = (doctor, startDate, endDate) => {
-    const slots = [];
-    const currentDate = new Date(startDate);
-
-    while (currentDate <= endDate) {
-      const dayName = getDayName(currentDate);
-      const daySchedule = doctor.schedule[dayName];
-
-      if (daySchedule) {
-        daySchedule.forEach(timeSlot => {
-          const slotDateTime = new Date(currentDate);
-          const [hours, minutes] = timeSlot.split(':');
-          slotDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
-          // Vérifier que le créneau est dans le futur
-          const now = new Date();
-          if (slotDateTime > now) {
-            const slotISO = slotDateTime.toISOString();
-
-            // Vérifier que le créneau n'est pas déjà réservé
-            if (!doctor.bookedSlots.includes(slotISO)) {
-              slots.push({
-                doctor: doctor,
-                datetime: slotDateTime,
-                time: timeSlot,
-                date: currentDate.toLocaleDateString('fr-FR'),
-                load: doctor.currentLoad,
-                available: doctor.currentLoad < doctor.maxLoad
-              });
-            }
-          }
-        });
-      }
-
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return slots;
-  };
-
-  // Équilibrer la charge entre médecins (priorité aux moins chargés)
-  const sortSlotsByLoad = (slots) => {
-    return slots.sort((a, b) => {
-      // Priorité 1: Médecins moins chargés
-      if (a.load !== b.load) {
-        return a.load - b.load;
-      }
-      // Priorité 2: Date plus proche
-      return a.datetime - b.datetime;
-    });
-  };
-
-  // Fonction principale pour obtenir des créneaux suggérés
-  const getSuggestedAppointments = (specialty, urgency = 'normal') => {
-    const doctors = findDoctorsBySpecialty(specialty);
-
-    if (doctors.length === 0) {
-      return [];
-    }
-
-    // Période de recherche selon l'urgence
-    const startDate = new Date();
-    const endDate = new Date();
-
-    if (urgency === 'urgent') {
-      endDate.setDate(startDate.getDate() + 2); // 2 jours pour urgent
-    } else {
-      endDate.setDate(startDate.getDate() + 7); // 7 jours pour normal
-    }
-
-    // Obtenir tous les créneaux disponibles
-    const allSlots = [];
-    doctors.forEach(doctor => {
-      const doctorSlots = getAvailableSlots(doctor, startDate, endDate);
-      allSlots.push(...doctorSlots);
-    });
-
-    // Filtrer seulement les médecins disponibles (pas surchargés)
-    const availableSlots = allSlots.filter(slot => slot.available);
-
-    // Équilibrer et limiter à 3 suggestions
-    const sortedSlots = sortSlotsByLoad(availableSlots);
-    return sortedSlots.slice(0, 3);
-  };
-
-  // Réserver un créneau
+  // Réserver un créneau via API
   const bookAppointment = async (slot, patient) => {
     setIsBookingAppointment(true);
 
     try {
-      // Simulation d'appel API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const appointmentData = {
+        patientId: patient.id,
+        doctorId: slot.doctor.id,
+        appointmentDate: slot.datetime.toISOString(),
+        duration: slot.duration || 30,
+        reason: 'Consultation'
+      };
 
-      // Ajouter le créneau aux slots réservés du médecin
-      const slotISO = slot.datetime.toISOString();
-      const doctorIndex = DOCTORS_DATA.findIndex(d => d.id === slot.doctor.id);
-      if (doctorIndex !== -1) {
-        DOCTORS_DATA[doctorIndex].bookedSlots.push(slotISO);
-        DOCTORS_DATA[doctorIndex].currentLoad += 1;
-      }
+      const response = await api.post('/reception/appointments', appointmentData);
 
-      // Mettre à jour le patient avec le RDV
-      const updatedPatients = patients.map(p =>
-        p.id === patient.id
-          ? {
-              ...p,
-              nextAppointment: slotISO,
-              preferredDoctor: slot.doctor.name
-            }
-          : p
-      );
-      setPatients(updatedPatients);
-
-      console.log('RDV créé:', {
+      console.log('RDV créé avec succès:', {
         patient: patient.name,
         doctor: slot.doctor.name,
         datetime: slot.datetime,
         specialty: slot.doctor.specialty
       });
+
+      // Actualiser la liste des patients
+      loadPatients();
 
       return true;
     } catch (error) {
@@ -950,14 +1123,13 @@ export default function PatientsManager() {
 
       setPatients(updatedPatients);
 
-      // Générer suggestions RDV si nécessaire
+      // Charger les créneaux pour une consultation si nécessaire
       if (checkInData.consultationType === 'consultation') {
-        const suggestedAppointments = getSuggestedAppointments(selectedPatientForCheckIn.preferredSpecialty || '');
-        if (suggestedAppointments.length > 0) {
-          setSuggestedSlots(suggestedAppointments);
-          setNewlyCreatedPatient(selectedPatientForCheckIn);
-          setShowAppointmentModal(true);
-        }
+        const specialtyToUse = selectedPatientForCheckIn.preferredSpecialty || 'Généraliste';
+        console.log('🔄 Chargement des créneaux pour consultation:', specialtyToUse);
+
+        setNewlyCreatedPatient(selectedPatientForCheckIn);
+        setShowAppointmentModal(true);
       }
 
       // Fermer le modal de check-in
@@ -1013,32 +1185,40 @@ export default function PatientsManager() {
       <div className="flex justify-between items-center mb-6">
         <div className="flex-1">
           <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-gray-900">Gestion des Patients</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {currentMode === 'nouveau' && 'Nouveau Patient'}
+              {currentMode === 'recherche' && 'Recherche de Patients'}
+              {currentMode === 'liste' && 'Gestion des Patients'}
+            </h1>
             <ConnectionStatus status={connectionStatus} isRefreshing={isLoading} />
           </div>
           <p className="text-gray-600 mt-1">
-            {hasRole('RECEPTION') ? 'Interface réception - Accueil et contact patients' : 'Vue complète des patients'}
+            {currentMode === 'nouveau' && 'Créer un nouveau dossier patient'}
+            {currentMode === 'recherche' && 'Rechercher et filtrer les patients'}
+            {currentMode === 'liste' && (hasRole('RECEPTION') ? 'Interface réception - Accueil et contact patients' : 'Vue complète des patients')}
           </p>
         </div>
 
-        <div className="flex space-x-3">
-          <button
-            onClick={() => setShowCheckInModal(true)}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <UserCheck2 className="w-4 h-4 mr-2" />
-            Patient Existant
-          </button>
-          {canCreatePatients && (
+        {currentMode !== 'nouveau' && (
+          <div className="flex space-x-3">
             <button
-              onClick={() => setShowNewPatientModal(true)}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => setShowCheckInModal(true)}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Nouveau Patient
+              <UserCheck2 className="w-4 h-4 mr-2" />
+              Patient Existant
             </button>
-          )}
-        </div>
+            {canCreatePatients && (
+              <button
+                onClick={() => setShowNewPatientModal(true)}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Nouveau Patient
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Statistiques rapides */}
@@ -1091,7 +1271,10 @@ export default function PatientsManager() {
       </div>
 
       {/* Filtres et recherche */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      {currentMode !== 'nouveau' && (
+      <div className={`bg-white rounded-lg border p-6 mb-6 ${
+        currentMode === 'recherche' ? 'border-purple-200 ring-2 ring-purple-100' : 'border-gray-200'
+      }`}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
           {/* Barre de recherche */}
           <div className="flex-1 max-w-md">
@@ -1132,8 +1315,10 @@ export default function PatientsManager() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Liste des patients - Tableau */}
+      {currentMode !== 'nouveau' && (
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -1250,7 +1435,7 @@ export default function PatientsManager() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`text-sm font-medium ${getBalanceColor(patient.balance)}`}>
-                          {patient.balance !== 0 ? `${patient.balance > 0 ? '+' : ''}${patient.balance}€` : '0€'}
+                          {patient.balance !== 0 ? `${patient.balance > 0 ? '+' : ''}${patient.balance} CFA` : '0 CFA'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1270,6 +1455,7 @@ export default function PatientsManager() {
                           </button>
                           {canUpdatePatientInfo && (
                             <button
+                              onClick={() => handleEditPatient(patient)}
                               className="text-gray-600 hover:text-gray-900 transition-colors"
                               title="Modifier"
                             >
@@ -1277,6 +1463,7 @@ export default function PatientsManager() {
                             </button>
                           )}
                           <button
+                            onClick={() => handlePatientPayment(patient)}
                             className="text-green-600 hover:text-green-900 transition-colors"
                             title="Paiement"
                           >
@@ -1292,21 +1479,6 @@ export default function PatientsManager() {
           </div>
         )}
       </div>
-
-      {/* Limitation d'accès pour RECEPTION */}
-      {hasRole('RECEPTION') && (
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <Info className="w-5 h-5 text-blue-600 mt-0.5" />
-            <div>
-              <h4 className="text-sm font-medium text-blue-900">Accès limité - Réception</h4>
-              <p className="text-sm text-blue-700 mt-1">
-                En tant que réceptionniste, vous avez accès aux informations de contact et administratives.
-                Les données médicales sensibles ne sont pas visibles dans cette interface.
-              </p>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Modal Nouveau Patient */}
@@ -1393,6 +1565,22 @@ export default function PatientsManager() {
                       </p>
                     )}
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sexe
+                    </label>
+                    <select
+                      value={newPatient.gender}
+                      onChange={(e) => handleNewPatientChange('gender', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={isSaving}
+                    >
+                      <option value="OTHER">Non spécifié</option>
+                      <option value="MALE">Masculin</option>
+                      <option value="FEMALE">Féminin</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -1414,7 +1602,7 @@ export default function PatientsManager() {
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                         errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'
                       }`}
-                      placeholder="+33 6 12 34 56 78"
+                      placeholder="+225 07 12 34 56 78"
                       disabled={isSaving}
                     />
                     {errors.phone && (
@@ -1496,6 +1684,43 @@ export default function PatientsManager() {
                         <option value="Autre">Autre</option>
                       </select>
                     </div>
+
+                    {/* Numéro d'assurance */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Numéro d'assurance {newPatient.insuranceType !== 'Autre' ? '*' : ''}
+                        <span className="text-xs text-gray-500 block">
+                          {newPatient.insuranceType === 'Sécurité Sociale' && 'Numéro de sécurité sociale'}
+                          {newPatient.insuranceType === 'CMU' && 'Numéro CMU'}
+                          {newPatient.insuranceType === 'Mutuelle' && 'Numéro d\'adhérent mutuelle'}
+                          {newPatient.insuranceType === 'Assurance privée' && 'Numéro de police d\'assurance'}
+                          {newPatient.insuranceType === 'Autre' && 'Numéro ou référence (optionnel)'}
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newPatient.insuranceNumber}
+                        onChange={(e) => handleNewPatientChange('insuranceNumber', e.target.value.toUpperCase())}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          errors.insuranceNumber ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder={
+                          newPatient.insuranceType === 'Sécurité Sociale' ? 'Ex: 1234567890123' :
+                          newPatient.insuranceType === 'CMU' ? 'Ex: CMU123456789' :
+                          newPatient.insuranceType === 'Mutuelle' ? 'Ex: MUT987654321' :
+                          newPatient.insuranceType === 'Assurance privée' ? 'Ex: POL456789123' :
+                          'Numéro ou référence'
+                        }
+                        disabled={isSaving}
+                      />
+                      {errors.insuranceNumber && (
+                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                          <AlertTriangle className="w-4 h-4 mr-1" />
+                          {errors.insuranceNumber}
+                        </p>
+                      )}
+                    </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Spécialité souhaitée
@@ -1604,45 +1829,194 @@ export default function PatientsManager() {
                   )}
                 </div>
 
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contact d'urgence *
-                  </label>
-                  <input
-                    type="text"
-                    value={newPatient.emergencyContact}
-                    onChange={(e) => handleNewPatientChange('emergencyContact', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      errors.emergencyContact ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
-                    placeholder="Nom - Téléphone"
-                    disabled={isSaving}
-                  />
-                  {errors.emergencyContact && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                      <AlertTriangle className="w-4 h-4 mr-1" />
-                      {errors.emergencyContact}
-                    </p>
-                  )}
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nom du contact d'urgence *
+                    </label>
+                    <input
+                      type="text"
+                      value={newPatient.emergencyContactName}
+                      onChange={(e) => handleNewPatientChange('emergencyContactName', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.emergencyContactName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="Nom et prénom"
+                      disabled={isSaving}
+                    />
+                    {errors.emergencyContactName && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertTriangle className="w-4 h-4 mr-1" />
+                        {errors.emergencyContactName}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Téléphone du contact d'urgence *
+                    </label>
+                    <input
+                      type="tel"
+                      value={newPatient.emergencyContactPhone}
+                      onChange={(e) => handleNewPatientChange('emergencyContactPhone', e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.emergencyContactPhone ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      placeholder="+225 07 12 34 56 78"
+                      disabled={isSaving}
+                    />
+                    {errors.emergencyContactPhone && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertTriangle className="w-4 h-4 mr-1" />
+                        {errors.emergencyContactPhone}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Notes */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notes d'accueil
+              {/* Notes d'accueil avec suggestions */}
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-2 text-orange-600" />
+                  Notes importantes pour l'accueil
                 </label>
+
+                {/* Suggestions rapides par catégorie */}
+                <div className="mb-3 space-y-3">
+
+                  {/* Allergies & Médicales */}
+                  <div>
+                    <p className="text-xs font-medium text-red-700 mb-1 flex items-center">
+                      <Shield className="w-3 h-3 mr-1" />
+                      Allergies & Médical
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        "Allergie antibiotiques",
+                        "Allergie anesthésie",
+                        "Hypertension",
+                        "Diabète",
+                        "Pacemaker"
+                      ].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            const currentNotes = newPatient.notes || '';
+                            const separator = currentNotes.length > 0 ? ', ' : '';
+                            handleNewPatientChange('notes', currentNotes + separator + suggestion);
+                          }}
+                          className="px-2 py-1 text-xs bg-red-50 border border-red-200 text-red-700 rounded-md hover:bg-red-100 transition-colors"
+                        >
+                          + {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Préférences */}
+                  <div>
+                    <p className="text-xs font-medium text-blue-700 mb-1 flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      Préférences RDV
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        "RDV matin uniquement",
+                        "Éviter vendredi",
+                        "Préfère Dr. X",
+                        "Ponctuel/le",
+                        "Besoin temps supplémentaire"
+                      ].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            const currentNotes = newPatient.notes || '';
+                            const separator = currentNotes.length > 0 ? ', ' : '';
+                            handleNewPatientChange('notes', currentNotes + separator + suggestion);
+                          }}
+                          className="px-2 py-1 text-xs bg-blue-50 border border-blue-200 text-blue-700 rounded-md hover:bg-blue-100 transition-colors"
+                        >
+                          + {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Accessibilité */}
+                  <div>
+                    <p className="text-xs font-medium text-purple-700 mb-1 flex items-center">
+                      <UserX className="w-3 h-3 mr-1" />
+                      Accessibilité
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        "Difficultés audition",
+                        "Mobilité réduite",
+                        "Fauteuil roulant",
+                        "Malvoyant",
+                        "Parle peu français"
+                      ].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            const currentNotes = newPatient.notes || '';
+                            const separator = currentNotes.length > 0 ? ', ' : '';
+                            handleNewPatientChange('notes', currentNotes + separator + suggestion);
+                          }}
+                          className="px-2 py-1 text-xs bg-purple-50 border border-purple-200 text-purple-700 rounded-md hover:bg-purple-100 transition-colors"
+                        >
+                          + {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <textarea
                   value={newPatient.notes}
                   onChange={(e) => handleNewPatientChange('notes', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
-                  placeholder="Allergies, préférences, remarques importantes..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-vertical"
+                  placeholder="Ex: Allergie aux pénicillines, préfère les RDV l'après-midi, a des difficultés à se déplacer..."
                   disabled={isSaving}
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Ces notes seront visibles lors de l'accueil du patient
-                </p>
+
+                {/* Preview et actions */}
+                {newPatient.notes && (
+                  <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-orange-800 mb-1">Aperçu des notes d'accueil :</p>
+                        <p className="text-sm text-orange-700 leading-relaxed">{newPatient.notes}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleNewPatientChange('notes', '')}
+                        className="ml-2 p-1 text-orange-600 hover:text-orange-800 hover:bg-orange-100 rounded transition-colors"
+                        title="Effacer les notes"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-2 flex items-start space-x-2">
+                  <Info className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-orange-700">
+                    <p className="font-medium">Ces informations seront affichées :</p>
+                    <ul className="mt-1 space-y-0.5 text-orange-600">
+                      <li>• Lors de l'accueil du patient</li>
+                      <li>• Dans la fiche patient pour les consultations</li>
+                      <li>• Pour les prochains RDV</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
 
               {/* Informations générées automatiquement */}
@@ -1730,7 +2104,15 @@ export default function PatientsManager() {
                 </p>
               </div>
 
-              {suggestedSlots.length === 0 ? (
+              {isLoadingSlotsData ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Recherche des créneaux disponibles...</h3>
+                  <p className="text-gray-500">
+                    Nous analysons les plannings des médecins pour vous proposer les meilleurs créneaux.
+                  </p>
+                </div>
+              ) : suggestedSlots.length === 0 ? (
                 <div className="text-center py-8">
                   <Clock12 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun créneau disponible</h3>
@@ -1822,17 +2204,7 @@ export default function PatientsManager() {
               <div className="flex space-x-3">
                 {suggestedSlots.length > 0 && (
                   <button
-                    onClick={async () => {
-                      if (selectedSlot && newlyCreatedPatient) {
-                        const success = await bookAppointment(selectedSlot, newlyCreatedPatient);
-                        if (success) {
-                          setShowAppointmentModal(false);
-                          setNewlyCreatedPatient(null);
-                          setSuggestedSlots([]);
-                          setSelectedSlot(null);
-                        }
-                      }
-                    }}
+                    onClick={handleBookAppointment}
                     disabled={!selectedSlot || isBookingAppointment}
                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -2051,6 +2423,496 @@ export default function PatientsManager() {
                   )}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Détails Patient */}
+      {showPatientDetailsModal && selectedPatient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <Eye className="w-6 h-6 mr-2 text-blue-600" />
+                Détails du Patient
+              </h2>
+              <button
+                onClick={() => {
+                  setShowPatientDetailsModal(false);
+                  setSelectedPatient(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Informations personnelles</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Nom complet</label>
+                      <p className="text-sm text-gray-900">{selectedPatient.name}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Date de naissance</label>
+                      <p className="text-sm text-gray-900">{new Date(selectedPatient.birthDate).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Âge</label>
+                      <p className="text-sm text-gray-900">{calculateAge(selectedPatient.birthDate)} ans</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Genre</label>
+                      <p className="text-sm text-gray-900">{selectedPatient.gender === 'MALE' ? 'Masculin' : selectedPatient.gender === 'FEMALE' ? 'Féminin' : 'Non spécifié'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Contact</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Téléphone</label>
+                      <p className="text-sm text-gray-900">{selectedPatient.phone}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Email</label>
+                      <p className="text-sm text-gray-900">{selectedPatient.email}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Adresse</label>
+                      <p className="text-sm text-gray-900">{selectedPatient.address}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Contact d'urgence</label>
+                      <p className="text-sm text-gray-900">{selectedPatient.emergencyContact}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Informations médicales</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Numéro médical</label>
+                    <p className="text-sm text-gray-900">{selectedPatient.medicalNumber}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Assurance</label>
+                    <p className="text-sm text-gray-900">{selectedPatient.insuranceType}</p>
+                  </div>
+                  {selectedPatient.insuranceNumber && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Numéro d'assurance</label>
+                      <p className="text-sm text-gray-900 font-mono">{selectedPatient.insuranceNumber}</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Solde</label>
+                    <p className={`text-sm font-medium ${getBalanceColor(selectedPatient.balance)}`}>
+                      {selectedPatient.balance > 0 ? '+' : ''}{selectedPatient.balance} CFA
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nombre de consultations</label>
+                    <p className="text-sm text-gray-900">{selectedPatient.appointmentHistory}</p>
+                  </div>
+                </div>
+
+                {selectedPatient.notes && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                    <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{selectedPatient.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Informations d'audit */}
+              {selectedPatient.createdByName && (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <UserCheck2 className="w-5 h-5 mr-2 text-gray-600" />
+                    Informations d'audit
+                  </h3>
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Créé par</label>
+                      <p className="text-sm text-gray-900 font-medium">{selectedPatient.createdByName}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Date de création</label>
+                      <p className="text-sm text-gray-900">
+                        {selectedPatient.createdAt ? new Date(selectedPatient.createdAt).toLocaleString('fr-FR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Non disponible'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowPatientDetailsModal(false);
+                  setSelectedPatient(null);
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Modification Patient */}
+      {showEditPatientModal && editingPatient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                <Edit3 className="w-6 h-6 mr-2 text-gray-600" />
+                Modifier le Patient
+              </h2>
+              <button
+                onClick={() => {
+                  setShowEditPatientModal(false);
+                  setEditingPatient(null);
+                  setErrors({});
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {errors.general && (
+                <div className="flex items-center p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-red-600 mr-3" />
+                  <div>
+                    <p className="font-medium text-red-800">Erreur de modification</p>
+                    <p className="text-sm text-red-700">{errors.general}</p>
+                  </div>
+                </div>
+              )}
+
+              <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); handleUpdatePatient(); }}>
+                {/* Informations personnelles */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <User className="w-5 h-5 mr-2 text-gray-600" />
+                    Informations personnelles
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nom complet *
+                      </label>
+                      <input
+                        type="text"
+                        value={editingPatient.name || ''}
+                        onChange={(e) => setEditingPatient(prev => ({...prev, name: e.target.value}))}
+                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="Prénom Nom"
+                      />
+                      {errors.name && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.name}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de naissance *
+                      </label>
+                      <input
+                        type="date"
+                        value={editingPatient.birthDate || ''}
+                        onChange={(e) => setEditingPatient(prev => ({...prev, birthDate: e.target.value}))}
+                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.birthDate ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                      />
+                      {errors.birthDate && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.birthDate}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Genre
+                      </label>
+                      <select
+                        value={editingPatient.gender || 'MALE'}
+                        onChange={(e) => setEditingPatient(prev => ({...prev, gender: e.target.value}))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="MALE">Masculin</option>
+                        <option value="FEMALE">Féminin</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Statut
+                      </label>
+                      <select
+                        value={editingPatient.status || 'active'}
+                        onChange={(e) => setEditingPatient(prev => ({...prev, status: e.target.value}))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="active">Actif</option>
+                        <option value="inactive">Inactif</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact */}
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <Phone className="w-5 h-5 mr-2 text-blue-600" />
+                    Contact
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Téléphone *
+                      </label>
+                      <input
+                        type="tel"
+                        value={editingPatient.phone && editingPatient.phone !== '+225 ' ? editingPatient.phone : '+225 '}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          if (!value.startsWith('+225 ')) {
+                            value = '+225 ' + value.replace(/^\+225\s*/, '');
+                          }
+
+                          // Extraire seulement les chiffres après +225
+                          const digitsOnly = value.replace(/^\+225\s*/, '').replace(/\D/g, '');
+
+                          // Limiter à 10 chiffres maximum
+                          if (digitsOnly.length <= 10) {
+                            // Reformater avec espaces pour lisibilité
+                            let formattedDigits = digitsOnly;
+                            if (digitsOnly.length > 2) {
+                              formattedDigits = digitsOnly.substring(0, 2) + ' ' +
+                                              digitsOnly.substring(2, 4) + ' ' +
+                                              digitsOnly.substring(4, 6) + ' ' +
+                                              digitsOnly.substring(6, 8) + ' ' +
+                                              digitsOnly.substring(8, 10);
+                            }
+                            formattedDigits = formattedDigits.trim();
+                            setEditingPatient(prev => ({...prev, phone: '+225 ' + formattedDigits}));
+                          }
+                        }}
+                        onFocus={(e) => {
+                          if (!e.target.value || e.target.value === '+225 ') {
+                            setEditingPatient(prev => ({...prev, phone: '+225 '}));
+                          }
+                        }}
+                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="+225 07 12 34 56 78"
+                        maxLength="19"
+                      />
+                      {errors.phone && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.phone}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email *
+                      </label>
+                      <input
+                        type="email"
+                        value={editingPatient.email || ''}
+                        onChange={(e) => setEditingPatient(prev => ({...prev, email: e.target.value}))}
+                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="patient@email.com"
+                      />
+                      {errors.email && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.email}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Adresse *
+                      </label>
+                      <textarea
+                        value={editingPatient.address || ''}
+                        onChange={(e) => setEditingPatient(prev => ({...prev, address: e.target.value}))}
+                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.address ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        rows="2"
+                        placeholder="Adresse complète"
+                      />
+                      {errors.address && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.address}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact d'urgence */}
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <AlertCircle className="w-5 h-5 mr-2 text-orange-600" />
+                    Contact d'urgence
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nom du contact *
+                      </label>
+                      <input
+                        type="text"
+                        value={editingPatient.emergencyContactName || ''}
+                        onChange={(e) => setEditingPatient(prev => ({...prev, emergencyContactName: e.target.value}))}
+                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.emergencyContactName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="Nom du contact"
+                      />
+                      {errors.emergencyContactName && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.emergencyContactName}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Téléphone du contact *
+                      </label>
+                      <input
+                        type="tel"
+                        value={editingPatient.emergencyContactPhone && editingPatient.emergencyContactPhone !== '+225 ' ? editingPatient.emergencyContactPhone : '+225 '}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          if (!value.startsWith('+225 ')) {
+                            value = '+225 ' + value.replace(/^\+225\s*/, '');
+                          }
+
+                          // Extraire seulement les chiffres après +225
+                          const digitsOnly = value.replace(/^\+225\s*/, '').replace(/\D/g, '');
+
+                          // Limiter à 10 chiffres maximum
+                          if (digitsOnly.length <= 10) {
+                            // Reformater avec espaces pour lisibilité
+                            let formattedDigits = digitsOnly;
+                            if (digitsOnly.length > 2) {
+                              formattedDigits = digitsOnly.substring(0, 2) + ' ' +
+                                              digitsOnly.substring(2, 4) + ' ' +
+                                              digitsOnly.substring(4, 6) + ' ' +
+                                              digitsOnly.substring(6, 8) + ' ' +
+                                              digitsOnly.substring(8, 10);
+                            }
+                            formattedDigits = formattedDigits.trim();
+                            setEditingPatient(prev => ({...prev, emergencyContactPhone: '+225 ' + formattedDigits}));
+                          }
+                        }}
+                        onFocus={(e) => {
+                          if (!e.target.value || e.target.value === '+225 ') {
+                            setEditingPatient(prev => ({...prev, emergencyContactPhone: '+225 '}));
+                          }
+                        }}
+                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          errors.emergencyContactPhone ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder="+225 07 12 34 56 78"
+                        maxLength="19"
+                      />
+                      {errors.emergencyContactPhone && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.emergencyContactPhone}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Antécédents médicaux */}
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <BookOpen className="w-5 h-5 mr-2 text-green-600" />
+                    Antécédents médicaux
+                  </h3>
+                  <textarea
+                    value={editingPatient.medicalHistory || editingPatient.notes || ''}
+                    onChange={(e) => setEditingPatient(prev => ({...prev, medicalHistory: e.target.value}))}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="3"
+                    placeholder="Antécédents médicaux, allergies, traitements en cours..."
+                  />
+                </div>
+              </form>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditPatientModal(false);
+                  setEditingPatient(null);
+                  setErrors({});
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                disabled={isSaving}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdatePatient}
+                disabled={isSaving}
+                className={`px-6 py-2 text-white rounded-lg transition-colors flex items-center ${
+                  isSaving
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Mise à jour...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Mettre à jour
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

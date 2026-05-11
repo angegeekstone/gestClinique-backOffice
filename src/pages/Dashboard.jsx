@@ -153,7 +153,7 @@ export default function Dashboard() {
           },
           {
             title: "Revenus Mensuel",
-            value: `€${revenueData.totalRevenue?.toLocaleString() || "0"}`,
+            value: `${revenueData.totalRevenue?.toLocaleString() || "0"} FCFA`,
             change: revenueData.growthRate || 0,
             changeType: revenueData.growthRate > 0 ? "increase" : revenueData.growthRate < 0 ? "decrease" : "neutral",
             icon: DollarSign
@@ -248,7 +248,7 @@ export default function Dashboard() {
           },
           {
             title: "Encaissements",
-            value: `€${revenueData.paidAmount?.toLocaleString() || "0"}`,
+            value: `${revenueData.paidAmount?.toLocaleString() || "0"} FCFA`,
             change: revenueData.growthRate || 0,
             changeType: revenueData.growthRate > 0 ? "increase" : "neutral",
             icon: DollarSign

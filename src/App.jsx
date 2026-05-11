@@ -82,8 +82,8 @@ function App() {
                   <Route path="/super-admin/cliniques" element={<CliniquesManagement />} />
                   <Route path="/super-admin/cliniques/nouvelle" element={<ComingSoon />} />
                   <Route path="/super-admin/abonnements" element={<ComingSoon />} />
-                  <Route path="/super-admin/system/**" element={<ComingSoon />} />
-                  <Route path="/super-admin/facturation/**" element={<ComingSoon />} />
+                  <Route path="/super-admin/system/*" element={<ComingSoon />} />
+                  <Route path="/super-admin/facturation/*" element={<ComingSoon />} />
                   <Route path="/super-admin/analytics" element={<ComingSoon />} />
 
                   {/* Admin Clinique Routes */}
@@ -96,11 +96,11 @@ function App() {
                   <Route path="/admin-clinique/rapports/stats" element={<ClinicReports />} />
                   <Route path="/admin-clinique/rapports/revenus" element={<RevenueReports />} />
                   <Route path="/admin-clinique/rapports/performance" element={<PerformanceAnalytics />} />
-                  <Route path="/admin-clinique/finances/**" element={<ComingSoon />} />
+                  <Route path="/admin-clinique/finances/*" element={<ComingSoon />} />
                   <Route path="/admin-clinique/finances/tarifs" element={<PricingManagement />} />
                   <Route path="/admin-clinique/parametres/general" element={<ClinicSettings />} />
                   <Route path="/admin-clinique/parametres/config" element={<ClinicConfiguration />} />
-                  <Route path="/admin-clinique/parametres/**" element={<ComingSoon />} />
+                  <Route path="/admin-clinique/parametres/*" element={<ComingSoon />} />
 
                   {/* Médecin Routes */}
                   <Route path="/medecin/consultations" element={<ConsultationsManager />} />
@@ -108,11 +108,17 @@ function App() {
                   <Route path="/medecin/consultations/historique" element={<ConsultationsManager />} />
                   <Route path="/medecin/ordonnances" element={<PrescriptionsManager />} />
 
-                  {/* Reception Routes */}
+                  {/* Reception Routes - Optimisées */}
+                  <Route path="/reception/planning" element={<RdvDuJour />} />
                   <Route path="/reception/rdv-du-jour" element={<RdvDuJour />} />
+                  <Route path="/reception/arrivees" element={<ComingSoon />} />
+                  <Route path="/reception/attente" element={<ComingSoon />} />
                   <Route path="/reception/patients" element={<PatientsManager />} />
-                  <Route path="/reception/patients/nouveau" element={<PatientsManager />} />
-                  <Route path="/reception/patients/recherche" element={<PatientsManager />} />
+                  <Route path="/reception/recherche" element={<PatientsManager />} />
+                  <Route path="/reception/nouveau-patient" element={<PatientsManager />} />
+                  {/* Routes legacy pour compatibilité */}
+                  <Route path="/reception/patients/nouveau" element={<Navigate to="/reception/nouveau-patient" replace />} />
+                  <Route path="/reception/patients/recherche" element={<Navigate to="/reception/recherche" replace />} />
                   <Route path="/reception/caisse" element={<CaisseManager />} />
                   <Route path="/reception/caisse/encaissements" element={<CaisseManager />} />
                   <Route path="/reception/caisse/historique" element={<CaisseManager />} />
