@@ -10,7 +10,10 @@ import {
   AlertCircle,
   Shield,
   Users,
-  Building
+  Building,
+  Calendar,
+  CreditCard,
+  ArrowRight,
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
@@ -19,259 +22,315 @@ const DEMO_ACCOUNTS = [
     email: 'admin@gestclinique.com',
     password: 'Admin123',
     name: 'Alexandre Martin',
-    description: 'Propriétaire système - Accès complet',
+    description: 'Administrateur · Accès complet',
     icon: Building,
-    color: 'text-red-600',
-    bgColor: 'bg-red-50 border-red-200'
   },
   {
     role: 'ADMIN_CLINIQUE',
     email: 'directeur@clinique-centrale.fr',
     password: 'directeur123',
     name: 'Dr. Marie Dupont',
-    description: 'Directeur Clinique Centrale - Gestion clinique',
+    description: 'Directrice · Clinique Centrale',
     icon: Shield,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50 border-purple-200'
   },
   {
     role: 'MEDECIN',
     email: 'marie.bernard@clinique-centrale.fr',
     password: 'medecin123',
     name: 'Dr. Marie Bernard',
-    description: 'Cardiologue - Consultations & Ordonnances',
+    description: 'Cardiologue · Consultations & Ordonnances',
     icon: Stethoscope,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50 border-blue-200'
   },
   {
     role: 'RECEPTION',
     email: 'reception@clinique-centrale.fr',
     password: 'reception123',
     name: 'Sophie Lefebvre',
-    description: 'Réceptionniste - Patients & Caisse',
+    description: 'Réceptionniste · Patients & Caisse',
     icon: Users,
-    color: 'text-green-600',
-    bgColor: 'bg-green-50 border-green-200'
-  }
+  },
 ];
 
+const inputStyle = {
+  width: '100%',
+  height: 'var(--control-md)',
+  padding: '0 14px',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-body-md)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius-md)',
+  background: 'var(--surface-card)',
+  color: 'var(--text-strong)',
+  outline: 'none',
+  transition: 'border-color var(--dur-fast)',
+};
+
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]         = useState('');
+  const [password, setPassword]   = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [error, setError]         = useState('');
+  const [loading, setLoading]     = useState(false);
+  const navigate  = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       await login(email, password);
       navigate('/dashboard');
-    } catch (error) {
-      console.error('Login error:', error);
-      let errorMessage = 'Échec de la connexion. Vérifiez vos identifiants.';
-
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response.data.error) {
-          errorMessage = error.response.data.error;
-        }
-      }
-
-      setError(errorMessage);
+    } catch (err) {
+      const data = err.response?.data;
+      setError(
+        typeof data === 'string' ? data :
+        data?.message ?? data?.error ?? 'Échec de la connexion. Vérifiez vos identifiants.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoLogin = (account) => {
-    setEmail(account.email);
-    setPassword(account.password);
-    setError('');
-  };
-
   const quickLogin = async (account) => {
+    setError('');
+    setLoading(true);
     try {
       await login(account.email, account.password);
       navigate('/dashboard');
-    } catch (error) {
-      console.error('Quick login error:', error);
-      let errorMessage = 'Échec de la connexion';
-
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response.data.error) {
-          errorMessage = error.response.data.error;
-        }
-      }
-
-      setError(errorMessage);
+    } catch (err) {
+      const data = err.response?.data;
+      setError(
+        typeof data === 'string' ? data :
+        data?.message ?? data?.error ?? 'Échec de la connexion.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-6xl w-full grid lg:grid-cols-2 gap-8">
+    <div style={{
+      display: 'flex', height: '100vh', width: '100%',
+      fontFamily: 'var(--font-sans)',
+    }}>
 
-        {/* Formulaire de connexion */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Stethoscope className="w-8 h-8 text-white" />
+      {/* ── Left: form panel ─────────────────────────────────── */}
+      <div style={{
+        flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '32px 24px', overflowY: 'auto', background: 'var(--surface-app)',
+      }}>
+        <div style={{ width: '100%', maxWidth: 400 }}>
+
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
+            <div style={{
+              width: 36, height: 36, background: 'var(--brand)',
+              borderRadius: 'var(--radius-md)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Stethoscope size={18} color="#fff" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">GestClinique</h1>
-            <p className="text-gray-600 mt-2">Connectez-vous à votre espace</p>
+            <span style={{
+              fontSize: 18, fontWeight: 800, color: 'var(--text-strong)',
+              letterSpacing: 'var(--tracking-snug)',
+            }}>gestclinique</span>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <h1 style={{
+            fontSize: 28, fontWeight: 800, color: 'var(--text-strong)',
+            letterSpacing: 'var(--tracking-tight)', margin: 0,
+          }}>Bon retour parmi vous</h1>
+          <p style={{ fontSize: 15, color: 'var(--text-muted)', margin: '8px 0 32px' }}>
+            Connectez-vous pour accéder à votre clinique.
+          </p>
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Adresse email
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-strong)', marginBottom: 6 }}>
+                Adresse e-mail
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
+              <div style={{ position: 'relative' }}>
+                <Mail size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-subtle)', pointerEvents: 'none' }} />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="votre@email.com"
                   required
                   autoComplete="username"
+                  className="gc-input"
+                  style={{ ...inputStyle, paddingLeft: 40 }}
                 />
               </div>
             </div>
 
+            {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-strong)', marginBottom: 6 }}>
                 Mot de passe
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
+              <div style={{ position: 'relative' }}>
+                <Lock size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-subtle)', pointerEvents: 'none' }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Votre mot de passe"
+                  placeholder="••••••••"
                   required
+                  className="gc-input"
+                  style={{ ...inputStyle, paddingLeft: 40, paddingRight: 44 }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  style={{
+                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--text-subtle)', display: 'flex', alignItems: 'center',
+                    padding: 2,
+                  }}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  )}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <input type="checkbox" defaultChecked style={{ accentColor: 'var(--brand)', width: 14, height: 14 }} />
+                Se souvenir de moi
+              </label>
+              <a href="#" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-link)', textDecoration: 'none' }}>
+                Mot de passe oublié ?
+              </a>
+            </div>
+
             {error && (
-              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px',
+                background: 'var(--status-danger-bg)', color: 'var(--status-danger-fg)',
+                borderRadius: 'var(--radius-md)', fontSize: 13,
+              }}>
+                <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                {error}
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                width: '100%', height: 'var(--control-lg)',
+                fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body-lg)', fontWeight: 600,
+                color: 'var(--text-on-brand)',
+                background: loading ? 'var(--teal-400)' : 'var(--brand)',
+                border: '1px solid transparent', borderRadius: 'var(--radius-md)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'background var(--dur-fast), box-shadow var(--dur-fast)',
+              }}
+              onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = 'var(--brand-strong)'; e.currentTarget.style.boxShadow = 'var(--shadow-brand)'; } }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = loading ? 'var(--teal-400)' : 'var(--brand)'; e.currentTarget.style.boxShadow = 'none'; }}
             >
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading ? 'Connexion en cours…' : 'Se connecter'}
+              {!loading && <ArrowRight size={18} />}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
-              Mot de passe oublié ?
-              <a href="#" className="text-blue-600 hover:text-blue-700 ml-1">
-                Récupérer mon accès
-              </a>
-            </p>
-          </div>
-        </div>
-
-        {/* Comptes de démonstration */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Comptes de Démonstration</h2>
-            <p className="text-gray-600 mt-2">Cliquez pour remplir automatiquement ou connexion directe</p>
+          {/* Divider + demo accounts */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '28px 0 16px' }}>
+            <span style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-subtle)' }}>
+              Comptes de démonstration
+            </span>
+            <span style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
           </div>
 
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {DEMO_ACCOUNTS.map((account) => {
               const Icon = account.icon;
               return (
-                <div
+                <button
                   key={account.email}
-                  className={`border-2 rounded-xl p-4 transition-all hover:shadow-md ${account.bgColor}`}
+                  type="button"
+                  onClick={() => quickLogin(account)}
+                  disabled={loading}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                    border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
+                    background: 'var(--surface-card)', cursor: loading ? 'not-allowed' : 'pointer',
+                    textAlign: 'left', fontFamily: 'var(--font-sans)',
+                    transition: 'border-color var(--dur-fast), background var(--dur-fast)',
+                    opacity: loading ? 0.5 : 1,
+                  }}
+                  onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.borderColor = 'var(--brand-border)'; e.currentTarget.style.background = 'var(--brand-soft)'; } }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface-card)'; }}
                 >
-                  <div className="flex items-start space-x-4">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-white`}>
-                      <Icon className={`w-6 h-6 ${account.color}`} />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{account.name}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{account.description}</p>
-                      <div className="text-xs text-gray-500 space-y-1">
-                        <div><strong>Email:</strong> {account.email}</div>
-                        <div><strong>Mot de passe:</strong> {account.password}</div>
-                      </div>
-                    </div>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                    background: 'var(--brand-soft)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <Icon size={16} color="var(--brand)" />
                   </div>
-                  <div className="flex space-x-2 mt-4">
-                    <button
-                      onClick={() => handleDemoLogin(account)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
-                    >
-                      Remplir le formulaire
-                    </button>
-                    <button
-                      onClick={() => quickLogin(account)}
-                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white ${
-                        account.role === 'ADMIN_CLINIQUE' ? 'bg-red-600 hover:bg-red-700' :
-                        account.role === 'ADMIN_CLINIQUE' ? 'bg-purple-600 hover:bg-purple-700' :
-                        account.role === 'MEDECIN' ? 'bg-blue-600 hover:bg-blue-700' :
-                        'bg-green-600 hover:bg-green-700'
-                      }`}
-                    >
-                      Connexion directe
-                    </button>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-strong)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-subtle)' }}>{account.description}</div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
 
-          <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-            <h4 className="font-medium text-gray-900 mb-2">Autres comptes disponibles:</h4>
-            <div className="text-sm text-gray-600 space-y-1">
-              <div>• <strong>Autre Admin:</strong> directeur@clinique-nord.fr / directeur123</div>
-              <div>• <strong>Médecins:</strong> pierre.martin@clinique-nord.fr, sophie.dubois@clinique-centrale.fr</div>
-              <div>• <strong>Réception:</strong> accueil@clinique-nord.fr, chef.accueil@clinique-centrale.fr</div>
-              <div className="text-xs text-gray-500 mt-2">Mot de passe: [rôle]123 (ex: medecin123)</div>
-            </div>
+          <p style={{ fontSize: 11.5, color: 'var(--text-subtle)', textAlign: 'center', marginTop: 28, lineHeight: 1.5 }}>
+            Données de santé hébergées sur infrastructure certifiée HDS.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Right: brand panel ────────────────────────────────── */}
+      <div style={{
+        flex: '1 1 0', position: 'relative', overflow: 'hidden',
+        background: 'var(--teal-900)', color: '#fff',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        padding: '64px 56px',
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(120% 80% at 90% 10%, rgba(111,194,184,0.20), transparent 60%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{ position: 'relative' }}>
+          <span style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
+            textTransform: 'uppercase', color: 'var(--teal-300)',
+          }}>gestclinique</span>
+          <p style={{
+            fontFamily: 'var(--font-display)', fontSize: 38, fontWeight: 800,
+            letterSpacing: 'var(--tracking-tight)', lineHeight: 1.15,
+            margin: '20px 0 0', maxWidth: '16ch',
+          }}>
+            Toute votre clinique, dans une seule plateforme.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 44 }}>
+            {[
+              [Calendar,    'Agenda partagé entre praticiens'],
+              [Users,       'Dossiers patients centralisés'],
+              [CreditCard,  'Facturation et suivi des paiements'],
+            ].map(([Icon, txt]) => (
+              <div key={txt} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 40, height: 40, borderRadius: 'var(--radius-md)',
+                  background: 'rgba(255,255,255,0.10)', color: 'var(--teal-200)', flexShrink: 0,
+                }}>
+                  <Icon size={20} />
+                </span>
+                <span style={{ fontSize: 16, color: 'var(--teal-50)' }}>{txt}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -24,7 +24,7 @@ import {
   AlertCircle,
   CreditCard
 } from 'lucide-react';
-import { ROLES } from '../../contexts/AuthContext';
+import { ROLES } from '../../contexts/authConstants';
 
 const getRoleInfo = (role) => {
   const roleMap = {

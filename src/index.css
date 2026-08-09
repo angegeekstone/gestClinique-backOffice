@@ -1,34 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   gestclinique — Design Tokens
+   Premium & refined clinic management SaaS.
+   ============================================================ */
+:root {
+  /* Brand: Petrol / Teal */
+  --teal-50:  #ECF7F5;
+  --teal-100: #D2EDE9;
+  --teal-200: #A6DAD3;
+  --teal-300: #6FC2B8;
+  --teal-400: #3DA398;
+  --teal-500: #1A857A;
+  --teal-600: #0F6E66;
+  --teal-700: #0B564F;
+  --teal-800: #093F3A;
+  --teal-900: #082F2B;
+
+  /* Accent: Clay / warm coral */
+  --clay-50:  #FBF1EC;
+  --clay-100: #F6DED3;
+  --clay-200: #ECBCA7;
+  --clay-300: #E09B7E;
+  --clay-400: #D27C5C;
+  --clay-500: #C0654A;
+  --clay-600: #A2503A;
+
+  /* Neutrals: warm stone (not cold gray) */
+  --stone-0:   #FFFFFF;
+  --stone-50:  #FAF9F7;
+  --stone-100: #F4F2EE;
+  --stone-200: #E9E6E0;
+  --stone-300: #D8D3CB;
+  --stone-400: #B7B1A7;
+  --stone-500: #8C857A;
+  --stone-600: #6B6459;
+  --stone-700: #4E4840;
+  --stone-800: #332F2A;
+  --stone-900: #1F1C18;
+
+  /* Status */
+  --green-50:  #E9F5EE;
+  --green-500: #2E8B57;
+  --green-600: #257146;
+  --amber-50:  #FBF2E3;
+  --amber-500: #C98A2E;
+  --amber-600: #A56F1F;
+  --red-50:    #FBECEA;
+  --red-500:   #C0453B;
+  --red-600:   #9E372F;
+  --blue-50:   #E9F0FB;
+  --blue-500:  #2D6FE0;
+  --blue-600:  #2257B6;
+
+  /* Semantic aliases */
+  --brand:          var(--teal-600);
+  --brand-strong:   var(--teal-700);
+  --brand-soft:     var(--teal-50);
+  --brand-soft-2:   var(--teal-100);
+  --brand-border:   var(--teal-200);
+  --brand-contrast: #FFFFFF;
+  --accent:         var(--clay-500);
+  --accent-soft:    var(--clay-50);
+
+  --text-strong:   var(--stone-900);
+  --text-body:     var(--stone-800);
+  --text-muted:    var(--stone-600);
+  --text-subtle:   var(--stone-500);
+  --text-on-brand: #FFFFFF;
+  --text-link:     var(--teal-700);
+
+  --surface-app:     var(--stone-50);
+  --surface-card:    var(--stone-0);
+  --surface-sunken:  var(--stone-100);
+  --surface-raised:  var(--stone-0);
+  --surface-inverse: var(--teal-900);
+  --surface-hover:   var(--stone-100);
+  --surface-active:  var(--stone-200);
+
+  --border:        var(--stone-200);
+  --border-strong: var(--stone-300);
+  --border-focus:  var(--teal-500);
+  --divider:       var(--stone-200);
+
+  --status-success-fg: var(--green-600);
+  --status-success-bg: var(--green-50);
+  --status-warning-fg: var(--amber-600);
+  --status-warning-bg: var(--amber-50);
+  --status-danger-fg:  var(--red-600);
+  --status-danger-bg:  var(--red-50);
+  --status-info-fg:    var(--blue-600);
+  --status-info-bg:    var(--blue-50);
+
+  --ring: 0 0 0 3px rgba(26, 133, 122, 0.30);
+
+  /* Typography */
+  --font-sans:    "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+  --weight-extrabold:800;
+
+  --text-display:  44px;
+  --text-h1:       32px;
+  --text-h2:       26px;
+  --text-h3:       21px;
+  --text-title:    17px;
+  --text-body-lg:  16px;
+  --text-body-md:  14px;
+  --text-body-sm:  13px;
+  --text-caption:  12px;
+  --text-overline: 11px;
+
+  --leading-tight:   1.15;
+  --leading-snug:    1.3;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  --tracking-tight:    -0.02em;
+  --tracking-snug:     -0.01em;
+  --tracking-normal:   0;
+  --tracking-wide:     0.04em;
+  --tracking-overline: 0.08em;
+
+  /* Spacing (4px grid) */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  32px;
+  --space-8:  40px;
+  --space-9:  48px;
+  --space-10: 64px;
+  --space-11: 80px;
+  --space-12: 96px;
+
+  /* Radii */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-2xl:  28px;
+  --radius-full: 999px;
+
+  /* Control heights */
+  --control-sm: 32px;
+  --control-md: 40px;
+  --control-lg: 48px;
+
+  /* Layout */
+  --sidebar-w:    264px;
+  --topbar-h:     64px;
+
+  /* Elevation */
+  --shadow-xs: 0 1px 2px rgba(31, 28, 24, 0.05);
+  --shadow-sm: 0 1px 3px rgba(31, 28, 24, 0.07), 0 1px 2px rgba(31, 28, 24, 0.04);
+  --shadow-md: 0 4px 12px rgba(31, 28, 24, 0.08), 0 2px 4px rgba(31, 28, 24, 0.04);
+  --shadow-lg: 0 12px 28px rgba(31, 28, 24, 0.10), 0 4px 8px rgba(31, 28, 24, 0.05);
+  --shadow-xl: 0 24px 48px rgba(31, 28, 24, 0.14), 0 8px 16px rgba(31, 28, 24, 0.06);
+  --shadow-brand: 0 8px 20px rgba(15, 110, 102, 0.22);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast:  120ms;
+  --dur-base:  180ms;
+  --dur-slow:  280ms;
+}
+
+/* Base resets */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body-md);
+  color: var(--text-body);
+  background: var(--surface-app);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-display);
+  color: var(--text-strong);
+  margin: 0;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+a { color: var(--text-link); text-decoration: none; }
+
+.tnum { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--font-mono); }
+
+::selection { background: var(--teal-100); color: var(--teal-900); }
+
+/* Shared input focus style */
+.gc-input:focus {
+  outline: none;
+  border-color: var(--border-focus) !important;
+  box-shadow: var(--ring);
+}
+
 /* Toast animations */
 @keyframes slide-in-right {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
-
 @keyframes slide-out-right {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(100%);
-    opacity: 0;
-  }
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
 }
 
-.animate-slide-in-right {
-  animation: slide-in-right 0.3s ease-out;
-}
-
-.animate-slide-out-right {
-  animation: slide-out-right 0.3s ease-in;
-}
+.animate-slide-in-right  { animation: slide-in-right  0.3s ease-out; }
+.animate-slide-out-right { animation: slide-out-right 0.3s ease-in;  }

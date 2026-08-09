@@ -1,4 +1,4 @@
-export const MOCK_USERS = [
+donnexport const MOCK_USERS = [
   // ADMIN_CLINIQUE - Propriétaire système
   {
     id: 1,

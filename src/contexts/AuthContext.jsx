@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
+import { ROLES, PERMISSIONS, rolePermissions } from './authConstants';
 
 const AuthContext = createContext();
 
@@ -9,89 +10,6 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
-
-export const ROLES = {
-  ADMIN_CLINIQUE: 'ADMIN_CLINIQUE',
-  MEDECIN: 'MEDECIN',
-  RECEPTION: 'RECEPTION',
-  CAISSE: 'CAISSE'
-};
-
-export const PERMISSIONS = {
-  // ADMIN_CLINIQUE permissions (ancien SUPER_ADMIN)
-  MANAGE_ALL_CLINIQUES: 'manage_all_cliniques',
-  MANAGE_SYSTEM_CONFIG: 'manage_system_config',
-  MANAGE_SUBSCRIPTIONS: 'manage_subscriptions',
-  ACCESS_ALL_DATA: 'access_all_data',
-  MANAGE_CLINIC_USERS: 'manage_clinic_users',
-  VIEW_CLINIC_REPORTS: 'view_clinic_reports',
-  MANAGE_CLINIC_SETTINGS: 'manage_clinic_settings',
-  MANAGE_FINANCES: 'manage_finances',
-
-  // MEDECIN permissions
-  MANAGE_CONSULTATIONS: 'manage_consultations',
-  GENERATE_PRESCRIPTIONS: 'generate_prescriptions',
-  VIEW_PATIENT_FILES: 'view_patient_files',
-
-  // RECEPTION permissions
-  MANAGE_PATIENTS: 'manage_patients',
-  VIEW_SCHEDULE: 'view_schedule',
-  CREATE_PATIENTS: 'create_patients',
-  UPDATE_PATIENT_INFO: 'update_patient_info',
-  VIEW_PATIENT_LIST: 'view_patient_list',
-  VIEW_PATIENT_CONTACT: 'view_patient_contact',
-
-  // CAISSIER permissions
-  MANAGE_PAYMENTS: 'manage_payments',
-  PROCESS_PAYMENTS: 'process_payments',
-  GENERATE_RECEIPTS: 'generate_receipts',
-  VIEW_PAYMENT_HISTORY: 'view_payment_history',
-  MANAGE_CASH_REGISTER: 'manage_cash_register',
-  GENERATE_CASH_REPORTS: 'generate_cash_reports'
-};
-
-const rolePermissions = {
-  [ROLES.ADMIN_CLINIQUE]: [
-    PERMISSIONS.MANAGE_ALL_CLINIQUES,
-    PERMISSIONS.MANAGE_SYSTEM_CONFIG,
-    PERMISSIONS.MANAGE_SUBSCRIPTIONS,
-    PERMISSIONS.ACCESS_ALL_DATA,
-    PERMISSIONS.MANAGE_CLINIC_USERS,
-    PERMISSIONS.VIEW_CLINIC_REPORTS,
-    PERMISSIONS.MANAGE_CLINIC_SETTINGS,
-    PERMISSIONS.MANAGE_FINANCES,
-    PERMISSIONS.MANAGE_CONSULTATIONS,
-    PERMISSIONS.GENERATE_PRESCRIPTIONS,
-    PERMISSIONS.VIEW_PATIENT_FILES,
-    PERMISSIONS.MANAGE_PATIENTS,
-    PERMISSIONS.MANAGE_PAYMENTS,
-    PERMISSIONS.VIEW_SCHEDULE
-  ],
-  [ROLES.MEDECIN]: [
-    PERMISSIONS.MANAGE_CONSULTATIONS,
-    PERMISSIONS.GENERATE_PRESCRIPTIONS,
-    PERMISSIONS.VIEW_PATIENT_FILES,
-    PERMISSIONS.VIEW_SCHEDULE
-  ],
-  [ROLES.RECEPTION]: [
-    PERMISSIONS.MANAGE_PATIENTS,
-    PERMISSIONS.VIEW_SCHEDULE,
-    PERMISSIONS.CREATE_PATIENTS,
-    PERMISSIONS.UPDATE_PATIENT_INFO,
-    PERMISSIONS.VIEW_PATIENT_LIST,
-    PERMISSIONS.VIEW_PATIENT_CONTACT
-  ],
-  [ROLES.CAISSE]: [
-    PERMISSIONS.MANAGE_PAYMENTS,
-    PERMISSIONS.PROCESS_PAYMENTS,
-    PERMISSIONS.GENERATE_RECEIPTS,
-    PERMISSIONS.VIEW_PAYMENT_HISTORY,
-    PERMISSIONS.MANAGE_CASH_REGISTER,
-    PERMISSIONS.GENERATE_CASH_REPORTS,
-    PERMISSIONS.VIEW_PATIENT_LIST,
-    PERMISSIONS.VIEW_PATIENT_CONTACT
-  ]
 };
 
 export function AuthProvider({ children }) {

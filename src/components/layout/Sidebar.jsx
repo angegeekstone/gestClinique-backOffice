@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home,
+  LayoutDashboard,
   Users,
   Calendar,
   FileText,
@@ -13,7 +13,6 @@ import {
   UserCheck,
   Pill,
   Activity,
-  Menu,
   Building,
   Shield,
   CreditCard,
@@ -21,384 +20,273 @@ import {
   UserPlus,
   DollarSign,
   Search,
-  Clock,
-  UserX,
-  TrendingUp
+  MessageSquare,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../utils/cn';
 
-const getMenuItemsForRole = (role, permissions) => {
-  const baseItems = [
-    {
-      title: 'Dashboard',
-      icon: Home,
-      href: '/dashboard',
-      roles: ['ADMIN_CLINIQUE', 'MEDECIN', 'RECEPTION', 'CAISSE'],
-      badge: 'Vue d\'ensemble',
-      badgeColor: 'bg-blue-100 text-blue-800'
-    }
+const getMenuItemsForRole = (role) => {
+  const base = [
+    { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, href: '/dashboard' },
   ];
 
-  const roleSpecificItems = {
+  const roleItems = {
     SUPER_ADMIN: [
-      {
-        title: 'Gestion Cliniques',
-        icon: Building,
-        href: '/super-admin/cliniques',
-        badge: 'TOUTES',
-        badgeColor: 'bg-red-100 text-red-800',
+      { id: 'cliniques', label: 'Gestion Cliniques', icon: Building, href: '/super-admin/cliniques',
         children: [
-          { title: 'Toutes les cliniques', href: '/super-admin/cliniques', badge: 'Actif' },
-          { title: 'Nouvelle clinique', href: '/super-admin/cliniques/nouvelle', badge: 'Créer' },
-          { title: 'Abonnements', href: '/super-admin/abonnements', badge: 'Gérer' },
+          { label: 'Toutes les cliniques', href: '/super-admin/cliniques' },
+          { label: 'Abonnements', href: '/super-admin/abonnements' },
         ]
       },
-      {
-        title: 'Administration Système',
-        icon: Shield,
-        href: '/super-admin/system',
-        badge: 'CONFIG',
-        badgeColor: 'bg-orange-100 text-orange-800',
+      { id: 'system', label: 'Administration Système', icon: Shield, href: '/super-admin/system/config',
         children: [
-          { title: 'Configuration globale', href: '/super-admin/system/config', badge: 'Actif' },
-          { title: 'Logs système', href: '/super-admin/system/logs', badge: 'Vue' },
-          { title: 'Maintenance', href: '/super-admin/system/maintenance', badge: 'Gérer' },
+          { label: 'Configuration globale', href: '/super-admin/system/config' },
+          { label: 'Logs système', href: '/super-admin/system/logs' },
         ]
       },
-      {
-        title: 'Facturation',
-        icon: CreditCard,
-        href: '/super-admin/facturation',
-        badge: 'BILLING',
-        badgeColor: 'bg-green-100 text-green-800',
-        children: [
-          { title: 'Factures', href: '/super-admin/facturation/factures', badge: 'Vue' },
-          { title: 'Paiements', href: '/super-admin/facturation/paiements', badge: 'Gérer' },
-          { title: 'Abonnements', href: '/super-admin/facturation/abonnements', badge: 'Gérer' },
-        ]
-      },
-      {
-        title: 'Analytics Global',
-        icon: Database,
-        href: '/super-admin/analytics',
-        badge: 'STATS',
-        badgeColor: 'bg-purple-100 text-purple-800',
-      }
+      { id: 'billing', label: 'Facturation', icon: CreditCard, href: '/super-admin/facturation' },
+      { id: 'analytics', label: 'Analytics Global', icon: Database, href: '/super-admin/analytics' },
     ],
     ADMIN_CLINIQUE: [
-      {
-        title: 'Utilisateurs',
-        icon: UserCheck,
-        href: '/admin-clinique/utilisateurs',
-        badge: 'ÉQUIPE',
-        badgeColor: 'bg-purple-100 text-purple-800'
-      },
-      {
-        title: 'Rôles & Permissions',
-        icon: Shield,
-        href: '/admin-clinique/utilisateurs/roles',
-        badge: 'DROITS',
-        badgeColor: 'bg-gray-100 text-gray-800'
-      },
-      {
-        title: 'Spécialités',
-        icon: Stethoscope,
-        href: '/admin-clinique/specialites',
-        badge: 'MEDICAL',
-        badgeColor: 'bg-emerald-100 text-emerald-800'
-      },
-      {
-        title: 'Assurances',
-        icon: Shield,
-        href: '/admin-clinique/assurances',
-        badge: 'MUTUELLE',
-        badgeColor: 'bg-purple-100 text-purple-800'
-      },
-      {
-        title: 'Rapports Clinique',
-        icon: BarChart3,
-        href: '/admin-clinique/rapports',
-        badge: 'STATS',
-        badgeColor: 'bg-indigo-100 text-indigo-800',
+      { id: 'users', label: 'Utilisateurs', icon: UserCheck, href: '/admin-clinique/utilisateurs' },
+      { id: 'roles', label: 'Rôles & Permissions', icon: Shield, href: '/admin-clinique/utilisateurs/roles' },
+      { id: 'specialites', label: 'Spécialités', icon: Stethoscope, href: '/admin-clinique/specialites' },
+      { id: 'assurances', label: 'Assurances', icon: Shield, href: '/admin-clinique/assurances' },
+      { id: 'rapports', label: 'Rapports', icon: BarChart3, href: '/admin-clinique/rapports',
         children: [
-          { title: 'Statistiques', href: '/admin-clinique/rapports/stats', badge: 'Vue' },
-          { title: 'Revenus', href: '/admin-clinique/rapports/revenus', badge: 'Vue' },
-          { title: 'Performance', href: '/admin-clinique/rapports/performance', badge: 'Vue' },
+          { label: 'Statistiques', href: '/admin-clinique/rapports/stats' },
+          { label: 'Revenus', href: '/admin-clinique/rapports/revenus' },
+          { label: 'Performance', href: '/admin-clinique/rapports/performance' },
         ]
       },
-      {
-        title: 'Finances',
-        icon: DollarSign,
-        href: '/admin-clinique/finances',
-        badge: 'CAISSE',
-        badgeColor: 'bg-green-100 text-green-800',
+      { id: 'finances', label: 'Finances', icon: DollarSign, href: '/admin-clinique/finances/caisse',
         children: [
-          { title: 'Caisse', href: '/admin-clinique/finances/caisse', badge: 'Gérer' },
-          { title: 'Facturation', href: '/admin-clinique/finances/facturation', badge: 'Gérer' },
-          { title: 'Tarifs', href: '/admin-clinique/finances/tarifs', badge: 'Définir' },
+          { label: 'Caisse', href: '/admin-clinique/finances/caisse' },
+          { label: 'Tarifs', href: '/admin-clinique/finances/tarifs' },
         ]
       },
-      {
-        title: 'Paramètres Clinique',
-        icon: Settings,
-        href: '/admin-clinique/parametres',
-        badge: 'CONFIG',
-        badgeColor: 'bg-gray-100 text-gray-800',
-        children: [
-          { title: 'Informations générales', href: '/admin-clinique/parametres/general', badge: 'Actif' },
-          { title: 'Configuration', href: '/admin-clinique/parametres/config', badge: 'Gérer' },
-          { title: 'Sécurité', href: '/admin-clinique/parametres/securite', badge: 'Gérer' },
-        ]
-      }
+      { id: 'patients', label: 'Patients', icon: Users, href: '/patients' },
+      { id: 'planning', label: 'Planning', icon: Calendar, href: '/planning' },
     ],
     MEDECIN: [
-      {
-        title: 'Consultations',
-        icon: Stethoscope,
-        href: '/medecin/consultations',
-        badge: 'SOINS',
-        badgeColor: 'bg-blue-100 text-blue-800',
+      { id: 'consultations', label: 'Consultations', icon: Stethoscope, href: '/medecin/consultations',
         children: [
-          { title: 'Mes consultations', href: '/medecin/consultations', badge: 'Actif' },
-          { title: 'Nouvelle consultation', href: '/medecin/consultations/nouvelle', badge: 'Créer' },
-          { title: 'Historique', href: '/medecin/consultations/historique', badge: 'Vue' },
+          { label: 'Mes consultations', href: '/medecin/consultations' },
+          { label: 'Nouvelle consultation', href: '/medecin/consultations/nouvelle' },
         ]
       },
-      {
-        title: 'Ordonnances',
-        icon: Pill,
-        href: '/medecin/ordonnances',
-        badge: 'RX',
-        badgeColor: 'bg-green-100 text-green-800',
-        children: [
-          { title: 'Mes ordonnances', href: '/medecin/ordonnances', badge: 'Historique' },
-          { title: 'Créer depuis consultation', href: '/medecin/consultations/nouvelle', badge: 'Nouveau' }
-        ]
-      }
+      { id: 'ordonnances', label: 'Ordonnances', icon: Pill, href: '/medecin/ordonnances' },
+      { id: 'patients', label: 'Patients', icon: Users, href: '/patients' },
+      { id: 'planning', label: 'Planning', icon: Calendar, href: '/planning' },
     ],
     RECEPTION: [
-      {
-        title: 'Planning du Jour',
-        icon: Calendar,
-        href: '/reception/planning',
-        badge: 'AUJOURD\'HUI',
-        badgeColor: 'bg-green-100 text-green-800',
-        children: [
-          { title: 'RDV du jour', href: '/reception/rdv-du-jour', badge: 'Actuel' },
-          { title: 'Arrivées patients', href: '/reception/arrivees', badge: 'Check-in' },
-          { title: 'Salle d\'attente', href: '/reception/attente', badge: 'En cours' },
-        ]
-      },
-      {
-        title: 'Gestion Patients',
-        icon: Users,
-        href: '/reception/patients',
-        badge: 'GESTION',
-        badgeColor: 'bg-blue-100 text-blue-800'
-      },
-      {
-        title: 'Recherche Rapide',
-        icon: Search,
-        href: '/reception/recherche',
-        badge: 'RECHERCHE',
-        badgeColor: 'bg-purple-100 text-purple-800'
-      },
-      {
-        title: 'Nouveau Patient',
-        icon: UserPlus,
-        href: '/reception/nouveau-patient',
-        badge: 'CRÉER',
-        badgeColor: 'bg-emerald-100 text-emerald-800'
-      },
+      { id: 'rdv', label: 'RDV du jour', icon: Calendar, href: '/reception/rdv-du-jour' },
+      { id: 'patients', label: 'Patients', icon: Users, href: '/reception/patients' },
+      { id: 'nouveau-patient', label: 'Nouveau patient', icon: UserPlus, href: '/reception/nouveau-patient' },
+      { id: 'recherche', label: 'Recherche rapide', icon: Search, href: '/reception/recherche' },
+      { id: 'caisse', label: 'Caisse', icon: DollarSign, href: '/reception/caisse' },
     ],
     CAISSE: [
-      {
-        title: 'Caisse',
-        icon: DollarSign,
-        href: '/caissier/caisse',
-        badge: 'PAIEMENTS',
-        badgeColor: 'bg-green-100 text-green-800',
-        children: [
-          { title: 'Encaissements', href: '/caissier/caisse/encaissements', badge: 'Actif' },
-          { title: 'Historique', href: '/caissier/caisse/historique', badge: 'Vue' },
-          { title: 'Rapport journalier', href: '/caissier/caisse/rapport', badge: 'Gérer' },
-        ]
-      },
-      {
-        title: 'Facturation',
-        icon: CreditCard,
-        href: '/caissier/facturation',
-        badge: 'FACTURES',
-        badgeColor: 'bg-blue-100 text-blue-800',
-        children: [
-          { title: 'Factures en attente', href: '/caissier/facturation/attente', badge: 'Vue' },
-          { title: 'Factures payées', href: '/caissier/facturation/payees', badge: 'Vue' },
-          { title: 'Relances', href: '/caissier/facturation/relances', badge: 'Gérer' },
-        ]
-      }
-    ]
+      { id: 'caisse', label: 'Caisse', icon: DollarSign, href: '/caissier/caisse' },
+      { id: 'encaissements', label: 'Encaissements', icon: CreditCard, href: '/caissier/caisse/encaissements' },
+    ],
   };
 
-  // Items communs pour certains rôles
-  const commonItems = [
-    {
-      title: 'Patients',
-      icon: Users,
-      href: '/patients',
-      roles: ['ADMIN_CLINIQUE', 'MEDECIN'],
-      badge: 'DOSSIERS',
-      badgeColor: 'bg-teal-100 text-teal-800',
-      children: [
-        { title: 'Liste des patients', href: '/patients', badge: 'Vue' },
-        { title: 'Dossiers médicaux', href: '/patients/dossiers', badge: 'Médicaux' },
-      ]
-    },
-    {
-      title: 'Planning',
-      icon: Calendar,
-      href: '/planning',
-      roles: ['ADMIN_CLINIQUE', 'MEDECIN'],
-      badge: 'RDV',
-      badgeColor: 'bg-orange-100 text-orange-800'
-    },
-    {
-      title: 'Documents',
-      icon: FileText,
-      href: '/documents',
-      roles: ['ADMIN_CLINIQUE', 'MEDECIN'],
-      badge: 'DOCS',
-      badgeColor: 'bg-gray-100 text-gray-800'
-    }
-  ];
-
-  return [
-    ...baseItems,
-    ...(roleSpecificItems[role] || []),
-    ...commonItems.filter(item => item.roles?.includes(role))
-  ];
+  return [...base, ...(roleItems[role] || [])];
 };
 
-const SidebarItem = ({ item, isOpen, activeItem, setActiveItem }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const navigate = useNavigate();
-  const hasChildren = item.children && item.children.length > 0;
+function NavItem({ item, onNavigate }) {
+  const location  = useLocation();
+  const [open, setOpen] = useState(false);
+  const hasChildren = item.children?.length > 0;
+  const isActive    = location.pathname === item.href ||
+    (hasChildren && item.children.some((c) => location.pathname === c.href));
 
   const handleClick = () => {
     if (hasChildren) {
-      setIsExpanded(!isExpanded);
+      setOpen((v) => !v);
     } else {
-      navigate(item.href);
+      onNavigate(item.href);
     }
-    setActiveItem(item.href);
   };
 
+  const Icon = item.icon;
+
   return (
-    <div className="mb-1">
+    <div>
       <button
         onClick={handleClick}
-        className={cn(
-          "w-full flex items-center px-4 py-3 text-left text-sm font-medium transition-colors duration-200",
-          "hover:bg-blue-50 hover:text-blue-700",
-          activeItem === item.href
-            ? "bg-blue-100 text-blue-700 border-r-2 border-blue-600"
-            : "text-gray-700"
-        )}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+          padding: '10px 12px', borderRadius: 'var(--radius-md)',
+          border: 'none', cursor: 'pointer', textAlign: 'left',
+          fontFamily: 'var(--font-sans)', fontSize: 'var(--text-body-md)',
+          background: isActive ? 'var(--brand-soft)' : 'transparent',
+          color: isActive ? 'var(--brand-strong)' : 'var(--text-muted)',
+          fontWeight: isActive ? 700 : 500,
+          transition: 'background var(--dur-fast), color var(--dur-fast)',
+        }}
+        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--surface-hover)'; }}
+        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
       >
-        <item.icon className="w-5 h-5 mr-3 flex-shrink-0" />
-        <div className={cn("flex-1 flex items-center", !isOpen && "hidden lg:flex")}>
-          <span>{item.title}</span>
-        </div>
+        <Icon size={18} style={{ flexShrink: 0 }} />
+        <span style={{ flex: 1 }}>{item.label}</span>
         {hasChildren && (
-          <div className={cn("ml-2", !isOpen && "hidden lg:block")}>
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-          </div>
+          open
+            ? <ChevronDown size={15} style={{ flexShrink: 0, opacity: 0.6 }} />
+            : <ChevronRight size={15} style={{ flexShrink: 0, opacity: 0.4 }} />
+        )}
+        {item.badge && (
+          <span style={{
+            fontSize: 10, fontWeight: 700, color: '#fff',
+            background: 'var(--accent)', borderRadius: 'var(--radius-full)',
+            minWidth: 18, height: 18, display: 'inline-flex',
+            alignItems: 'center', justifyContent: 'center', padding: '0 5px',
+          }}>{item.badge}</span>
         )}
       </button>
 
-      {hasChildren && isExpanded && (
-        <div className={cn("ml-8 space-y-1", !isOpen && "hidden lg:block")}>
-          {item.children.map((child) => (
-            <button
-              key={child.href}
-              onClick={() => {
-                navigate(child.href);
-                setActiveItem(child.href);
-              }}
-              className={cn(
-                "w-full text-left px-4 py-2 text-sm transition-colors duration-200",
-                "hover:bg-gray-50 hover:text-blue-600",
-                activeItem === child.href
-                  ? "text-blue-600 font-medium"
-                  : "text-gray-600"
-              )}
-            >
-              <div className="flex items-center w-full">
-                <span>{child.title}</span>
-              </div>
-            </button>
-          ))}
+      {hasChildren && open && (
+        <div style={{ marginLeft: 30, marginTop: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {item.children.map((child) => {
+            const childActive = location.pathname === child.href;
+            return (
+              <button
+                key={child.href}
+                onClick={() => onNavigate(child.href)}
+                style={{
+                  display: 'block', width: '100%', padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
+                  textAlign: 'left', fontFamily: 'var(--font-sans)',
+                  fontSize: 'var(--text-body-sm)',
+                  background: childActive ? 'var(--brand-soft)' : 'transparent',
+                  color: childActive ? 'var(--brand-strong)' : 'var(--text-muted)',
+                  fontWeight: childActive ? 600 : 400,
+                  transition: 'background var(--dur-fast)',
+                }}
+                onMouseEnter={(e) => { if (!childActive) e.currentTarget.style.background = 'var(--surface-hover)'; }}
+                onMouseLeave={(e) => { if (!childActive) e.currentTarget.style.background = 'transparent'; }}
+              >
+                {child.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
   );
-};
+}
 
 export default function Sidebar({ isOpen, toggleSidebar }) {
-  const [activeItem, setActiveItem] = useState('/dashboard');
-  const { user } = useAuth();
-  const menuItems = getMenuItemsForRole(user?.role, user?.permissions);
+  const navigate = useNavigate();
+  const { user }  = useAuth();
+  const items     = getMenuItemsForRole(user?.role);
+
+  const onNavigate = (href) => {
+    navigate(href);
+    if (window.innerWidth < 1024) toggleSidebar();
+  };
 
   return (
     <>
-      <div
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 bg-white shadow-lg transition-transform duration-300 transform",
-          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-          "w-64"
-        )}
+      {/* Sidebar */}
+      <aside
+        className={isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        style={{
+          position: 'fixed', inset: '0 auto 0 0', zIndex: 50,
+          width: 'var(--sidebar-w)',
+          background: 'var(--surface-card)',
+          borderRight: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column',
+          padding: '0 14px',
+          transition: 'transform var(--dur-base) var(--ease-standard)',
+        }}
       >
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-            <div className={cn("flex items-center", !isOpen && "justify-center w-full lg:justify-start")}>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Stethoscope className="w-5 h-5 text-white" />
-                </div>
-                <span className={cn("text-xl font-bold text-gray-800", !isOpen && "hidden lg:block")}>
-                  GestClinique
-                </span>
-              </div>
+        {/* Logo */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 8px 20px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, background: 'var(--brand)',
+              borderRadius: 'var(--radius-md)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Stethoscope size={16} color="#fff" />
             </div>
-            <button
-              onClick={toggleSidebar}
-              className="lg:hidden p-1.5 rounded-md hover:bg-gray-100"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+            <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-strong)', letterSpacing: 'var(--tracking-snug)' }}>
+              gestclinique
+            </span>
           </div>
-
-          <nav className="flex-1 py-4 overflow-y-auto">
-            {menuItems.map((item) => (
-              <SidebarItem
-                key={item.href}
-                item={item}
-                isOpen={isOpen}
-                activeItem={activeItem}
-                setActiveItem={setActiveItem}
-              />
-            ))}
-          </nav>
+          <button
+            onClick={toggleSidebar}
+            className="lg:hidden"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-muted)', padding: 4, display: 'flex',
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
-      </div>
 
+        {/* Role badge */}
+        {user?.role && (
+          <div style={{ padding: '0 8px 16px' }}>
+            <span style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'var(--brand)',
+              background: 'var(--brand-soft)', padding: '3px 8px',
+              borderRadius: 'var(--radius-full)',
+            }}>
+              {user.role.replace(/_/g, ' ')}
+            </span>
+          </div>
+        )}
+
+        {/* Nav */}
+        <nav style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {items.map((item) => (
+            <NavItem key={item.id} item={item} onNavigate={onNavigate} />
+          ))}
+        </nav>
+
+        {/* Bottom: documents + settings */}
+        <div style={{ padding: '16px 0', borderTop: '1px solid var(--divider)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {[
+            { icon: FileText, label: 'Documents', href: '/documents' },
+            { icon: Settings, label: 'Paramètres', href: '/admin-clinique/parametres/general' },
+          ].map(({ icon: Icon, label, href }) => {
+            const active = false;
+            return (
+              <button
+                key={href}
+                onClick={() => onNavigate(href)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                  padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                  border: 'none', cursor: 'pointer', background: 'transparent',
+                  color: 'var(--text-muted)', fontFamily: 'var(--font-sans)',
+                  fontSize: 'var(--text-body-md)', fontWeight: 500,
+                  transition: 'background var(--dur-fast)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <Icon size={18} style={{ flexShrink: 0 }} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </aside>
+
+      {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+          style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(31,28,24,0.4)' }}
+          className="lg:hidden"
           onClick={toggleSidebar}
         />
       )}

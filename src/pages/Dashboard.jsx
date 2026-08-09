@@ -19,7 +19,7 @@ import UpcomingAppointments from '../components/dashboard/UpcomingAppointments';
 import ConnectionStatus from '../components/dashboard/ConnectionStatus';
 import PeriodFilter from '../components/dashboard/PeriodFilter';
 import TestPeriodFilter from '../components/TestPeriodFilter';
-import { ROLES } from '../contexts/AuthContext';
+import { ROLES } from '../contexts/authConstants';
 import { dashboardService } from '../services/dashboardService.js';
 import { usePeriodFilter } from '../hooks/usePeriodFilter';
 
