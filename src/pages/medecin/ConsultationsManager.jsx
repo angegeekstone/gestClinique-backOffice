@@ -6,129 +6,15 @@ import {
   Clock,
   User,
   Search,
-  Filter,
   FileText,
   Pill,
-  Activity,
   CheckCircle,
   AlertCircle,
-  XCircle
+  XCircle,
+  Loader,
+  RefreshCw
 } from 'lucide-react';
-
-const consultations = [
-  {
-    id: 1,
-    patient: {
-      name: 'Marie Dubois',
-      age: 34,
-      phone: '+33 6 12 34 56 78'
-    },
-    date: '2024-12-12',
-    time: '09:30',
-    type: 'Consultation générale',
-    status: 'completed',
-    symptoms: 'Douleurs abdominales, fatigue',
-    diagnosis: 'Gastrite chronique',
-    prescription: true,
-    nextAppointment: '2024-12-26'
-  },
-  {
-    id: 2,
-    patient: {
-      name: 'Jean Martin',
-      age: 45,
-      phone: '+33 6 23 45 67 89'
-    },
-    date: '2024-12-12',
-    time: '10:15',
-    type: 'Suivi cardiologique',
-    status: 'in_progress',
-    symptoms: 'Essoufflement, palpitations',
-    diagnosis: '',
-    prescription: false,
-    nextAppointment: null
-  },
-  {
-    id: 3,
-    patient: {
-      name: 'Sophie Bernard',
-      age: 29,
-      phone: '+33 6 34 56 78 90'
-    },
-    date: '2024-12-12',
-    time: '11:00',
-    type: 'Consultation urgente',
-    status: 'scheduled',
-    symptoms: 'Fièvre élevée, maux de tête',
-    diagnosis: '',
-    prescription: false,
-    nextAppointment: null
-  },
-  {
-    id: 4,
-    patient: {
-      name: 'Pierre Lefebvre',
-      age: 52,
-      phone: '+33 6 45 67 89 01'
-    },
-    date: '2024-12-11',
-    time: '16:30',
-    type: 'Contrôle post-opératoire',
-    status: 'completed',
-    symptoms: 'Cicatrisation, douleurs modérées',
-    diagnosis: 'Cicatrisation normale',
-    prescription: true,
-    nextAppointment: '2024-12-18'
-  },
-  {
-    id: 5,
-    patient: {
-      name: 'Amélie Rousseau',
-      age: 38,
-      phone: '+33 6 56 78 90 12'
-    },
-    date: '2024-12-12',
-    time: '14:00',
-    type: 'Consultation générale',
-    status: 'scheduled',
-    symptoms: 'Toux persistante, fatigue',
-    diagnosis: '',
-    prescription: false,
-    nextAppointment: null
-  },
-  {
-    id: 6,
-    patient: {
-      name: 'Thomas André',
-      age: 41,
-      phone: '+33 6 67 89 01 23'
-    },
-    date: '2024-12-12',
-    time: '15:30',
-    type: 'Bilan de santé',
-    status: 'scheduled',
-    symptoms: 'Contrôle annuel',
-    diagnosis: '',
-    prescription: false,
-    nextAppointment: null
-  },
-  {
-    id: 7,
-    patient: {
-      name: 'Claire Moreau',
-      age: 33,
-      phone: '+33 6 78 90 12 34'
-    },
-    date: '2024-12-12',
-    time: '08:30',
-    type: 'Suivi traitement',
-    status: 'completed',
-    symptoms: 'Contrôle hypertension',
-    diagnosis: 'Tension stabilisée',
-    prescription: true,
-    nextAppointment: '2025-01-15'
-  }
-];
+import { consultationService } from '../../services/consultationService';
 
 const getStatusInfo = (status) => {
   const statusMap = {
@@ -156,12 +42,17 @@ const getStatusInfo = (status) => {
   return statusMap[status] || statusMap.scheduled;
 };
 
+const TODAY = new Date().toISOString().split('T')[0];
+
 export default function ConsultationsManager() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDate, setSelectedDate] = useState('2024-12-12');
+  const [selectedDate, setSelectedDate] = useState(TODAY);
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [consultations, setConsultations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Détection de la vue (consultations actuelles vs historique)
   const isHistoryView = location.pathname.includes('/historique');
@@ -170,12 +61,30 @@ export default function ConsultationsManager() {
   useEffect(() => {
     if (isHistoryView) {
       setSelectedStatus('completed');
-      setSelectedDate(''); // Afficher toutes les dates pour l'historique
+      setSelectedDate('');
     } else {
       setSelectedStatus('all');
-      setSelectedDate('2024-12-12'); // Date actuelle pour les consultations du jour
+      setSelectedDate(TODAY);
     }
   }, [isHistoryView]);
+
+  // Charger les consultations depuis l'API
+  useEffect(() => {
+    const fetchConsultations = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await consultationService.getConsultations();
+        const list = Array.isArray(data) ? data : data?.content ?? [];
+        setConsultations(list);
+      } catch (err) {
+        setError(err.message || 'Erreur lors du chargement des consultations');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConsultations();
+  }, [location.state?.newConsultation]);
 
   const filteredConsultations = consultations
     .filter(consultation => {
@@ -190,8 +99,7 @@ export default function ConsultationsManager() {
 
       // Pour les consultations actuelles, on exclut les consultations terminées anciennes
       if (!isHistoryView) {
-        // Afficher les consultations du jour (toutes) et les consultations non terminées d'autres jours
-        const isToday = consultation.date === '2024-12-12';
+        const isToday = consultation.date === TODAY;
         const isNotCompleted = consultation.status !== 'completed';
         return matchesSearch && matchesDate && matchesStatus && (isToday || isNotCompleted);
       }
@@ -220,7 +128,7 @@ export default function ConsultationsManager() {
       }
     });
 
-  const todayConsultations = consultations.filter(c => c.date === '2024-12-12');
+  const todayConsultations = consultations.filter(c => c.date === TODAY);
   const completedToday = todayConsultations.filter(c => c.status === 'completed').length;
   const pendingToday = todayConsultations.filter(c => c.status !== 'completed').length;
 
@@ -352,7 +260,36 @@ export default function ConsultationsManager() {
         </div>
 
 
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader className="w-8 h-8 text-blue-600 animate-spin mr-3" />
+            <span className="text-gray-600">Chargement des consultations...</span>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="flex items-center p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+            <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" />
+            <span className="text-red-700">{error}</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="ml-auto px-3 py-1 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-100 flex items-center"
+            >
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Réessayer
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && (
         <div className="space-y-4">
+          {filteredConsultations.length === 0 && (
+            <div className="text-center py-12">
+              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune consultation trouvée</h3>
+              <p className="text-gray-500">Essayez de modifier vos critères de recherche</p>
+            </div>
+          )}
           {filteredConsultations.map((consultation) => {
             const statusInfo = getStatusInfo(consultation.status);
             const StatusIcon = statusInfo.icon;
@@ -469,13 +406,6 @@ export default function ConsultationsManager() {
             );
           })}
         </div>
-
-        {filteredConsultations.length === 0 && (
-          <div className="text-center py-12">
-            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune consultation trouvée</h3>
-            <p className="text-gray-500">Essayez de modifier vos critères de recherche</p>
-          </div>
         )}
       </div>
     </div>
