@@ -18,23 +18,12 @@ import QuickActions from '../components/dashboard/QuickActions';
 import UpcomingAppointments from '../components/dashboard/UpcomingAppointments';
 import ConnectionStatus from '../components/dashboard/ConnectionStatus';
 import PeriodFilter from '../components/dashboard/PeriodFilter';
-import TestPeriodFilter from '../components/TestPeriodFilter';
 import { ROLES } from '../contexts/authConstants';
 import { dashboardService } from '../services/dashboardService.js';
 import { usePeriodFilter } from '../hooks/usePeriodFilter';
 
 export default function Dashboard() {
-  // Protection temporaire pour useAuth
-  let user = null;
-  let hasRole = () => true; // Temporaire: accès libre pour debug
-
-  try {
-    const auth = useAuth();
-    user = auth.user;
-    hasRole = auth.hasRole;
-  } catch (err) {
-    console.warn('⚠️ AuthContext temporairement désactivé pour debug');
-  }
+  const { user, hasRole } = useAuth();
 
   const { dateRange } = usePeriodFilter();
   const [dashboardData, setDashboardData] = useState(null);
@@ -334,12 +323,10 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-red-600">🔴 DASHBOARD MODIFIÉ - TEST EN COURS 🔴</h1>
           <h2 className="text-xl font-bold text-gray-900">{dashboardContent.title}</h2>
           <p className="text-gray-600">{dashboardContent.subtitle}</p>
         </div>
         <div className="flex items-center space-x-4">
-          <TestPeriodFilter />
           <PeriodFilter />
           <ConnectionStatus status={connectionStatus} isRefreshing={isRefreshing} />
           <button

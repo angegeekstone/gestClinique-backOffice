@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { consultationService } from '../../services/consultationService';
+import { patientService } from '../../services/patientService';
 import {
   User,
   Search,
@@ -27,46 +29,6 @@ import {
   Send,
   Printer
 } from 'lucide-react';
-
-// Données de test patients
-const SAMPLE_PATIENTS = [
-  {
-    id: 1,
-    name: 'Marie Dubois',
-    birthDate: '1990-05-15',
-    phone: '+33 6 12 34 56 78',
-    email: 'marie.dubois@email.com',
-    medicalNumber: 'P001234',
-    allergies: ['Pénicilline', 'Arachides'],
-    chronicConditions: ['Hypertension'],
-    lastConsultation: '2024-11-15',
-    insurance: 'Sécurité Sociale'
-  },
-  {
-    id: 2,
-    name: 'Jean Martin',
-    birthDate: '1978-09-22',
-    phone: '+33 6 23 45 67 89',
-    email: 'jean.martin@email.com',
-    medicalNumber: 'P001235',
-    allergies: [],
-    chronicConditions: ['Diabète type 2'],
-    lastConsultation: '2024-12-01',
-    insurance: 'Mutuelle'
-  },
-  {
-    id: 3,
-    name: 'Sophie Bernard',
-    birthDate: '1985-03-10',
-    phone: '+33 6 34 56 78 90',
-    email: 'sophie.bernard@email.com',
-    medicalNumber: 'P001236',
-    allergies: ['Aspirine'],
-    chronicConditions: [],
-    lastConsultation: '2024-10-20',
-    insurance: 'CMU'
-  }
-];
 
 // Modèles de prescription
 const PRESCRIPTION_TEMPLATES = [
@@ -118,6 +80,7 @@ export default function NouvelleConsultation() {
   const [searchTerm, setSearchTerm] = useState('');
   const [foundPatients, setFoundPatients] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
   // États du formulaire de consultation
@@ -167,22 +130,36 @@ export default function NouvelleConsultation() {
     }
   }, [location.state]);
 
-  // Recherche de patients
-  const searchPatients = (term) => {
+  // Normalise un patient venant de l'API vers la forme attendue par le formulaire
+  const normalizePatient = (p) => ({
+    id: p.id,
+    name: p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim(),
+    birthDate: p.birthDate || p.dateOfBirth || '',
+    phone: p.phone || p.phoneNumber || '',
+    email: p.email || '',
+    medicalNumber: p.medicalNumber || p.patientNumber || String(p.id),
+    allergies: p.allergies || [],
+    chronicConditions: p.chronicConditions || p.chronicDiseases || [],
+    lastConsultation: p.lastConsultation || p.lastVisit || '',
+    insurance: p.insurance || p.insuranceName || '',
+  });
+
+  // Recherche de patients via l'API
+  const searchPatients = async (term) => {
     if (!term || term.length < 2) {
       setFoundPatients([]);
       return;
     }
-
-    const searchTerm = term.toLowerCase().trim();
-    const matches = SAMPLE_PATIENTS.filter(patient =>
-      patient.name.toLowerCase().includes(searchTerm) ||
-      patient.phone.includes(searchTerm) ||
-      patient.medicalNumber.toLowerCase().includes(searchTerm) ||
-      patient.email.toLowerCase().includes(searchTerm)
-    );
-
-    setFoundPatients(matches);
+    setSearchLoading(true);
+    try {
+      const data = await patientService.searchPatients(term);
+      const list = Array.isArray(data) ? data : data?.content ?? [];
+      setFoundPatients(list.map(normalizePatient));
+    } catch {
+      setFoundPatients([]);
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   // Calcul de l'âge
@@ -328,42 +305,33 @@ export default function NouvelleConsultation() {
 
   // Sauvegarde de la consultation
   const handleSaveConsultation = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsSaving(true);
     try {
-      // Simulation d'appel API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const newConsultation = {
-        id: Date.now(),
+      const payload = {
         patientId: selectedPatient.id,
-        patientName: selectedPatient.name,
-        doctorId: user.id,
-        doctorName: user.firstName + ' ' + user.lastName,
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        ...consultationData,
-        medications: medications,
-        status: 'completed',
-        createdAt: new Date().toISOString()
+        type: consultationData.type,
+        chiefComplaint: consultationData.chiefComplaint,
+        symptoms: consultationData.symptoms,
+        physicalExam: consultationData.physicalExam,
+        vitalSigns: consultationData.vitalSigns,
+        diagnosis: consultationData.diagnosis,
+        treatment: consultationData.treatment,
+        recommendations: consultationData.recommendations,
+        followUp: consultationData.followUp,
+        nextAppointmentDate: consultationData.nextAppointmentDate || null,
+        notes: consultationData.notes,
+        medications,
       };
 
-      console.log('Consultation créée:', newConsultation);
+      const created = await consultationService.createConsultation(payload);
 
-      // Redirection vers la liste des consultations
       navigate('/medecin/consultations', {
-        state: {
-          message: 'Consultation créée avec succès',
-          newConsultation
-        }
+        state: { message: 'Consultation créée avec succès', newConsultation: created }
       });
-
     } catch (error) {
-      console.error('Erreur lors de la création:', error);
-      setErrors({ general: 'Erreur lors de la sauvegarde' });
+      setErrors({ general: error.message || 'Erreur lors de la sauvegarde' });
     } finally {
       setIsSaving(false);
     }
@@ -462,7 +430,10 @@ export default function NouvelleConsultation() {
                 </div>
 
                 {/* Résultats de recherche */}
-                {foundPatients.length > 0 && (
+                {searchLoading && (
+                  <p className="text-sm text-gray-500 mb-2">Recherche en cours...</p>
+                )}
+                {!searchLoading && foundPatients.length > 0 && (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     <p className="text-sm text-gray-600 mb-3">
                       {foundPatients.length} patient(s) trouvé(s)
@@ -487,7 +458,7 @@ export default function NouvelleConsultation() {
                   </div>
                 )}
 
-                {searchTerm && searchTerm.length >= 2 && foundPatients.length === 0 && (
+                {!searchLoading && searchTerm && searchTerm.length >= 2 && foundPatients.length === 0 && (
                   <div className="text-center py-8">
                     <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun patient trouvé</h3>
