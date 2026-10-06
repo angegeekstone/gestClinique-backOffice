@@ -32,8 +32,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const url = error.config?.url || '';
+      // Ne déconnecter que si c'est l'endpoint d'auth lui-même (token vraiment invalide)
+      // Pour les endpoints de ressources, laisser le composant afficher l'erreur
+      if (url.includes('/auth/')) {
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

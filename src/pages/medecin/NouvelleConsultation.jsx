@@ -309,20 +309,21 @@ export default function NouvelleConsultation() {
 
     setIsSaving(true);
     try {
+      const symptomsText = [consultationData.chiefComplaint, consultationData.symptoms]
+        .filter(Boolean).join(' — ');
+      const clinicalNotesText = [consultationData.physicalExam, consultationData.notes]
+        .filter(Boolean).join('\n\n') || null;
+      const treatmentPlanText = [consultationData.treatment, consultationData.recommendations]
+        .filter(Boolean).join('\n\n') || null;
+
       const payload = {
         patientId: selectedPatient.id,
-        type: consultationData.type,
-        chiefComplaint: consultationData.chiefComplaint,
-        symptoms: consultationData.symptoms,
-        physicalExam: consultationData.physicalExam,
-        vitalSigns: consultationData.vitalSigns,
+        appointmentId: location.state?.consultationData?.appointmentId || null,
         diagnosis: consultationData.diagnosis,
-        treatment: consultationData.treatment,
-        recommendations: consultationData.recommendations,
-        followUp: consultationData.followUp,
-        nextAppointmentDate: consultationData.nextAppointmentDate || null,
-        notes: consultationData.notes,
-        medications,
+        symptoms: symptomsText,
+        clinicalNotes: clinicalNotesText,
+        treatmentPlan: treatmentPlanText,
+        consultationDate: new Date().toISOString(),
       };
 
       const created = await consultationService.createConsultation(payload);
@@ -331,7 +332,7 @@ export default function NouvelleConsultation() {
         state: { message: 'Consultation créée avec succès', newConsultation: created }
       });
     } catch (error) {
-      setErrors({ general: error.message || 'Erreur lors de la sauvegarde' });
+      setErrors({ general: error.response?.data?.message || error.message || 'Erreur lors de la sauvegarde' });
     } finally {
       setIsSaving(false);
     }

@@ -13,7 +13,7 @@ export const consultationService = {
     api.post('/medecin/consultations', data).then(handleResponse).catch(handleError),
 
   getConsultations: (params = {}) =>
-    api.get('/medecin/consultations', { params }).then(handleResponse).catch(handleError),
+    api.get('/medecin/consultations/my-consultations', { params }).then(handleResponse).catch(handleError),
 
   getConsultationById: (id) =>
     api.get(`/medecin/consultations/${id}`).then(handleResponse).catch(handleError),

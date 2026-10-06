@@ -88,8 +88,10 @@ export default function ConsultationsManager() {
 
   const filteredConsultations = consultations
     .filter(consultation => {
-      const matchesSearch = consultation.patient.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesDate = !selectedDate || consultation.date === selectedDate;
+      const patientName = (consultation.patient?.name ?? '').toLowerCase();
+      const matchesSearch = patientName.includes(searchTerm.toLowerCase());
+      const consultationDate = (consultation.date ?? '').slice(0, 10);
+      const matchesDate = !selectedDate || consultationDate === selectedDate;
       const matchesStatus = selectedStatus === 'all' || consultation.status === selectedStatus;
 
       // Pour l'historique, on affiche seulement les consultations terminées
@@ -99,7 +101,7 @@ export default function ConsultationsManager() {
 
       // Pour les consultations actuelles, on exclut les consultations terminées anciennes
       if (!isHistoryView) {
-        const isToday = consultation.date === TODAY;
+        const isToday = consultationDate === TODAY;
         const isNotCompleted = consultation.status !== 'completed';
         return matchesSearch && matchesDate && matchesStatus && (isToday || isNotCompleted);
       }
@@ -128,7 +130,7 @@ export default function ConsultationsManager() {
       }
     });
 
-  const todayConsultations = consultations.filter(c => c.date === TODAY);
+  const todayConsultations = consultations.filter(c => (c.date ?? '').slice(0, 10) === TODAY);
   const completedToday = todayConsultations.filter(c => c.status === 'completed').length;
   const pendingToday = todayConsultations.filter(c => c.status !== 'completed').length;
 
@@ -138,16 +140,16 @@ export default function ConsultationsManager() {
     navigate('/medecin/consultations/nouvelle', {
       state: {
         patientData: {
-          id: consultation.patient.id || Math.floor(Math.random() * 1000),
+          id: consultation.patient.id ?? null,
           name: consultation.patient.name,
-          birthDate: new Date(new Date().getFullYear() - consultation.patient.age, 0, 1).toISOString().split('T')[0],
-          phone: consultation.patient.phone,
-          email: consultation.patient.email || `${consultation.patient.name.toLowerCase().replace(' ', '.')}@email.com`,
-          medicalNumber: `P00${consultation.id}`,
-          allergies: [],
-          chronicConditions: [],
+          birthDate: consultation.patient.birthDate ?? '',
+          phone: consultation.patient.phone ?? '',
+          email: consultation.patient.email ?? '',
+          medicalNumber: consultation.patient.medicalNumber ?? `P00${consultation.id}`,
+          allergies: consultation.patient.allergies ?? [],
+          chronicConditions: consultation.patient.chronicConditions ?? [],
           lastConsultation: consultation.date,
-          insurance: 'Sécurité Sociale'
+          insurance: consultation.patient.insurance ?? '',
         },
         consultationData: {
           type: consultation.type,

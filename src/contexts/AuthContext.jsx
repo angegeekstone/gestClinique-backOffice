@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
     const response = await authService.login(username, password);
 
     // Decode JWT to get role and id from token payload
-    let userRole = response.role;
+    let userRole = response.roleName || response.role;
     let userId = response.id;
     if (response.token) {
       try {
