@@ -1,68 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus,
   Search,
-  Filter,
   FileText,
   User,
-  Calendar,
   Pill,
   Download,
   Eye,
   Copy,
   Printer,
-  Save
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
-
-const prescriptions = [
-  {
-    id: 1,
-    patient: {
-      name: 'Marie Dubois',
-      age: 34,
-      phone: '+33 6 12 34 56 78'
-    },
-    date: '2024-12-12',
-    medications: [
-      { name: 'Doliprane 1000mg', dosage: '1 comprimé 3x/jour', duration: '5 jours', quantity: '15 comprimés' },
-      { name: 'Spasfon Lyoc', dosage: '1 sachet si douleur', duration: 'Au besoin', quantity: '10 sachets' }
-    ],
-    diagnosis: 'Gastro-entérite aiguë',
-    status: 'active',
-    consultationId: 'C-2024-001'
-  },
-  {
-    id: 2,
-    patient: {
-      name: 'Jean Martin',
-      age: 45,
-      phone: '+33 6 23 45 67 89'
-    },
-    date: '2024-12-11',
-    medications: [
-      { name: 'Kardégic 75mg', dosage: '1 comprimé/jour', duration: '3 mois', quantity: '90 comprimés' },
-      { name: 'Amlor 5mg', dosage: '1 comprimé matin', duration: '3 mois', quantity: '90 comprimés' }
-    ],
-    diagnosis: 'Hypertension artérielle',
-    status: 'active',
-    consultationId: 'C-2024-002'
-  },
-  {
-    id: 3,
-    patient: {
-      name: 'Sophie Bernard',
-      age: 29,
-      phone: '+33 6 34 56 78 90'
-    },
-    date: '2024-12-10',
-    medications: [
-      { name: 'Augmentin 1g', dosage: '1 comprimé 2x/jour', duration: '7 jours', quantity: '14 comprimés' }
-    ],
-    diagnosis: 'Infection urinaire',
-    status: 'completed',
-    consultationId: 'C-2024-003'
-  }
-];
+import { prescriptionService } from '../../services/prescriptionService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const medicationTemplates = [
   {
@@ -83,23 +34,49 @@ const medicationTemplates = [
   }
 ];
 
-const getStatusColor = (status) => {
-  return status === 'active'
+const getStatusColor = (isActive) =>
+  isActive
     ? 'bg-green-100 text-green-800 border-green-200'
     : 'bg-gray-100 text-gray-800 border-gray-200';
-};
 
 export default function PrescriptionsManager() {
+  const { user } = useAuth();
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchPrescriptions = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await prescriptionService.getPrescriptionsByDoctor(user.id);
+        const list = Array.isArray(result) ? result : result?.content ?? [];
+        setPrescriptions(list);
+      } catch (err) {
+        setError(err.message || 'Erreur lors du chargement des ordonnances');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPrescriptions();
+  }, [user?.id]);
+
   const filteredPrescriptions = prescriptions.filter(prescription => {
-    const matchesSearch = prescription.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || prescription.status === selectedStatus;
+    const medicationName = prescription.medicationName ?? '';
+    const patientId = String(prescription.patientId ?? '');
+    const matchesSearch =
+      medicationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patientId.includes(searchTerm);
+    const matchesStatus =
+      selectedStatus === 'all' ||
+      (selectedStatus === 'active' && prescription.isActive) ||
+      (selectedStatus === 'completed' && !prescription.isActive);
     return matchesSearch && matchesStatus;
   });
-
 
   return (
     <div className="space-y-6">
@@ -117,14 +94,13 @@ export default function PrescriptionsManager() {
         </button>
       </div>
 
-
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Rechercher par patient ou diagnostic..."
+              placeholder="Rechercher par médicament ou patient..."
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -141,28 +117,49 @@ export default function PrescriptionsManager() {
           </select>
         </div>
 
+        {loading && (
+          <div className="flex items-center justify-center py-12 text-gray-500">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+            <span>Chargement des ordonnances...</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-4">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <div className="space-y-4">
-          {filteredPrescriptions.map((prescription) => (
+          {!loading && !error && filteredPrescriptions.map((prescription) => (
             <div key={prescription.id} className="border border-gray-200 rounded-lg p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <User className="w-6 h-6 text-blue-600" />
                   </div>
-
                   <div>
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{prescription.patient.name}</h3>
-                      <span className="text-sm text-gray-500">{prescription.patient.age} ans</span>
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(prescription.status)}`}>
-                        {prescription.status === 'active' ? 'Active' : 'Terminée'}
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Patient #{prescription.patientId}
+                      </h3>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(prescription.isActive)}`}>
+                        {prescription.isActive ? 'Active' : 'Terminée'}
                       </span>
                     </div>
-
                     <div className="text-sm text-gray-600 space-y-1">
-                      <p><strong>Diagnostic:</strong> {prescription.diagnosis}</p>
-                      <p><strong>Date:</strong> {new Date(prescription.date).toLocaleDateString()}</p>
-                      <p><strong>Consultation:</strong> {prescription.consultationId}</p>
+                      <p><strong>Date :</strong> {new Date(prescription.prescriptionDate).toLocaleDateString('fr-FR')}</p>
+                      {prescription.consultationId && (
+                        <p><strong>Consultation :</strong> #{prescription.consultationId}</p>
+                      )}
+                      {prescription.startDate && prescription.endDate && (
+                        <p>
+                          <strong>Période :</strong>{' '}
+                          {new Date(prescription.startDate).toLocaleDateString('fr-FR')} →{' '}
+                          {new Date(prescription.endDate).toLocaleDateString('fr-FR')}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -186,36 +183,37 @@ export default function PrescriptionsManager() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
                   <Pill className="w-4 h-4 mr-2" />
-                  Médicaments prescrits
+                  Médicament prescrit
                 </h4>
-                <div className="space-y-3">
-                  {prescription.medications.map((medication, index) => (
-                    <div key={index} className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-gray-900">{medication.name}</p>
-                        <p className="text-sm text-gray-600">{medication.dosage} - {medication.duration}</p>
-                      </div>
-                      <span className="text-sm bg-white px-2 py-1 rounded border">
-                        {medication.quantity}
-                      </span>
-                    </div>
-                  ))}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium text-gray-900">{prescription.medicationName}</p>
+                    <p className="text-sm text-gray-600">
+                      {prescription.dosage} — {prescription.frequency} — {prescription.duration}
+                    </p>
+                    {prescription.instructions && (
+                      <p className="text-sm text-gray-500 italic mt-1">{prescription.instructions}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {filteredPrescriptions.length === 0 && (
+        {!loading && !error && filteredPrescriptions.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune ordonnance trouvée</h3>
-            <p className="text-gray-500">Essayez de modifier vos critères de recherche</p>
+            <p className="text-gray-500">
+              {prescriptions.length === 0
+                ? 'Aucune ordonnance enregistrée pour le moment'
+                : 'Essayez de modifier vos critères de recherche'}
+            </p>
           </div>
         )}
       </div>
 
-      {/* Modèles de médicaments */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Modèles de prescription</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -223,10 +221,10 @@ export default function PrescriptionsManager() {
             <div key={index} className="border border-gray-200 rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-3">{template.category}</h4>
               <div className="space-y-2">
-                {template.medications.slice(0, 3).map((med, medIndex) => (
+                {template.medications.map((med, medIndex) => (
                   <div key={medIndex} className="text-sm">
                     <p className="font-medium text-gray-800">{med.name}</p>
-                    <p className="text-gray-600">{med.defaultDosage} - {med.defaultDuration}</p>
+                    <p className="text-gray-600">{med.defaultDosage} — {med.defaultDuration}</p>
                   </div>
                 ))}
               </div>

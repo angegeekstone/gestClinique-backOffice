@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { consultationService } from '../../services/consultationService';
 import { patientService } from '../../services/patientService';
+import { prescriptionService } from '../../services/prescriptionService';
 import {
   User,
   Search,
@@ -82,6 +83,7 @@ export default function NouvelleConsultation() {
   const [isSaving, setIsSaving] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [savedConsultationId, setSavedConsultationId] = useState(null);
 
   // États du formulaire de consultation
   const [consultationData, setConsultationData] = useState({
@@ -226,42 +228,64 @@ export default function NouvelleConsultation() {
     }
   };
 
-  // Générer l'ordonnance depuis la consultation
+  const buildConsultationPayload = () => {
+    const symptomsText = [consultationData.chiefComplaint, consultationData.symptoms]
+      .filter(Boolean).join(' — ');
+    const clinicalNotesText = [consultationData.physicalExam, consultationData.notes]
+      .filter(Boolean).join('\n\n') || null;
+    const treatmentPlanText = [consultationData.treatment, consultationData.recommendations]
+      .filter(Boolean).join('\n\n') || null;
+    return {
+      patientId: selectedPatient.id,
+      appointmentId: location.state?.consultationData?.appointmentId || null,
+      diagnosis: consultationData.diagnosis,
+      symptoms: symptomsText,
+      clinicalNotes: clinicalNotesText,
+      treatmentPlan: treatmentPlanText,
+      consultationDate: new Date().toISOString(),
+    };
+  };
+
+  // Sauvegarde la consultation si pas encore fait, retourne son ID
+  const ensureConsultationSaved = async () => {
+    if (savedConsultationId) return savedConsultationId;
+    const created = await consultationService.createConsultation(buildConsultationPayload());
+    const id = created?.id;
+    setSavedConsultationId(id);
+    return id;
+  };
+
+  // Générer l'ordonnance : sauvegarde la consultation d'abord, lie les prescriptions à son ID
   const generatePrescription = async () => {
     if (!selectedPatient || medications.length === 0) {
       setErrors({ prescription: 'Sélectionnez un patient et ajoutez des médicaments' });
       return;
     }
+    if (!validateForm()) return;
 
+    const startDate = new Date().toISOString();
     try {
-      const prescriptionData = {
-        id: Date.now(),
-        patient: {
-          name: selectedPatient.name,
-          age: new Date().getFullYear() - new Date(selectedPatient.birthDate).getFullYear(),
-          phone: selectedPatient.phone
-        },
-        date: new Date().toISOString().split('T')[0],
-        medications: medications.map(med => ({
-          name: med.name,
-          dosage: `${med.dosage} ${med.frequency}`,
-          duration: med.duration,
-          quantity: calculateQuantity(med.dosage, med.frequency, med.duration)
-        })),
-        diagnosis: consultationData.diagnosis || 'Diagnostic en cours',
-        status: 'active',
-        consultationId: `C-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`
-      };
-
-      console.log('Ordonnance générée:', prescriptionData);
+      const consultationId = await ensureConsultationSaved();
+      await Promise.all(
+        medications.map(med =>
+          prescriptionService.createPrescription({
+            patientId: selectedPatient.id,
+            consultationId,
+            medicationName: med.name,
+            dosage: med.dosage,
+            frequency: med.frequency,
+            duration: med.duration,
+            instructions: med.instructions || null,
+            isActive: true,
+            startDate,
+            endDate: null,
+          })
+        )
+      );
       setShowPrescriptionSuccess(true);
-
-      // Masquer le message après 3 secondes
       setTimeout(() => setShowPrescriptionSuccess(false), 3000);
-
     } catch (error) {
-      console.error('Erreur génération ordonnance:', error);
-      setErrors({ prescription: 'Erreur lors de la génération de l\'ordonnance' });
+      setErrors({ prescription: error.response?.data?.message || error.message || 'Erreur lors de la génération de l\'ordonnance' });
     }
   };
 
@@ -309,27 +333,9 @@ export default function NouvelleConsultation() {
 
     setIsSaving(true);
     try {
-      const symptomsText = [consultationData.chiefComplaint, consultationData.symptoms]
-        .filter(Boolean).join(' — ');
-      const clinicalNotesText = [consultationData.physicalExam, consultationData.notes]
-        .filter(Boolean).join('\n\n') || null;
-      const treatmentPlanText = [consultationData.treatment, consultationData.recommendations]
-        .filter(Boolean).join('\n\n') || null;
-
-      const payload = {
-        patientId: selectedPatient.id,
-        appointmentId: location.state?.consultationData?.appointmentId || null,
-        diagnosis: consultationData.diagnosis,
-        symptoms: symptomsText,
-        clinicalNotes: clinicalNotesText,
-        treatmentPlan: treatmentPlanText,
-        consultationDate: new Date().toISOString(),
-      };
-
-      const created = await consultationService.createConsultation(payload);
-
+      const id = await ensureConsultationSaved();
       navigate('/medecin/consultations', {
-        state: { message: 'Consultation créée avec succès', newConsultation: created }
+        state: { message: 'Consultation créée avec succès', consultationId: id }
       });
     } catch (error) {
       setErrors({ general: error.response?.data?.message || error.message || 'Erreur lors de la sauvegarde' });
